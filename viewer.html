@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nhật ký trả lời | Đà Lạt</title>
+  <style>
+    :root {
+      --ink: #202b2d;
+      --muted: #6d7c7c;
+      --paper: #f7f5ef;
+      --card: #fffdf8;
+      --line: #d8dfd8;
+      --accent: #d96545;
+      --accent-dark: #9d3f2d;
+      --teal: #287b78;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 40px 20px 60px;
+      color: var(--ink);
+      background: linear-gradient(135deg, #f8f5ed 0%, #eef4ee 100%);
+      font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; color: #173f40; font-size: clamp(26px, 4vw, 36px); }
+    p.sub { margin: 0 0 28px; color: var(--muted); }
+    .state { padding: 16px 18px; margin-bottom: 20px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 14px; }
+    .state.error { color: var(--accent-dark); border-color: var(--accent-dark); }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font-size: 14px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: rgba(40, 123, 120, .08); color: var(--accent-dark); font: 700 11px Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(40, 123, 120, .05); }
+    .empty { padding: 30px; text-align: center; color: var(--muted); background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+    button {
+      padding: 9px 16px; margin-bottom: 20px;
+      border: 1px solid var(--accent-dark); border-radius: 8px;
+      color: var(--accent-dark); background: transparent;
+      font: 700 12px Arial, sans-serif; cursor: pointer;
+    }
+    button:hover { color: #fff; background: var(--accent-dark); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Nhật ký trả lời</h1>
+    <p class="sub">Đọc trực tiếp từ <code>data/gate-log.json</code> trong repo.</p>
+    <button id="reload" type="button">Tải lại</button>
+    <div id="output"></div>
+  </main>
+  <script>
+    const output = document.querySelector('#output');
+
+    function renderState(message, isError) {
+      output.innerHTML = '';
+      const div = document.createElement('div');
+      div.className = 'state' + (isError ? ' error' : '');
+      div.textContent = message;
+      output.appendChild(div);
+    }
+
+    function renderEntries(entries) {
+      if (!entries.length) {
+        output.innerHTML = '<div class="empty">Chưa có câu trả lời nào được ghi lại.</div>';
+        return;
+      }
+      const sorted = [...entries].sort((a, b) => new Date(b.time) - new Date(a.time));
+      const rows = sorted.map(e => `
+        <tr>
+          <td>${new Date(e.time).toLocaleString('vi-VN')}</td>
+          <td>${escapeHtml(e.name || '')}</td>
+          <td>${escapeHtml(e.ip || '')}</td>
+          <td>${escapeHtml(e.question || '')}</td>
+          <td>${escapeHtml(e.answer || '')}</td>
+        </tr>`).join('');
+      output.innerHTML = `
+        <table>
+          <thead><tr><th>Thời gian</th><th>Tên</th><th>IP</th><th>Câu hỏi</th><th>Câu trả lời</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    async function load() {
+      renderState('Đang tải...', false);
+      try {
+        const res = await fetch(`data/gate-log.json?t=${Date.now()}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const entries = await res.json();
+        renderEntries(entries);
+      } catch (err) {
+        renderState(`Không tải được data/gate-log.json (${err.message}). Nếu bạn đang mở file cục bộ (file://), hãy chạy qua một server tĩnh hoặc mở trên GitHub Pages.`, true);
+      }
+    }
+
+    document.querySelector('#reload').addEventListener('click', load);
+    load();
+  </script>
+</body>
+</html>

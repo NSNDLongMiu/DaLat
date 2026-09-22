@@ -28,6 +28,73 @@
       line-height: 1.5;
     }
 
+    html.gate-active .shell { filter: blur(10px); pointer-events: none; user-select: none; transition: filter .5s ease; }
+    .shell { transition: filter .5s ease; }
+    .gate-overlay {
+      display: none;
+    }
+    html.gate-active .gate-overlay {
+      position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center;
+      padding: 20px; pointer-events: none;
+      background: radial-gradient(circle at 50% 40%, rgba(23, 63, 64, .12), rgba(23, 63, 64, .22));
+    }
+    .gate-card {
+      display: none; pointer-events: auto; width: 100%; max-width: 400px;
+      padding: 38px 32px 32px; text-align: center;
+      background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(23, 39, 37, .28);
+      animation: gate-pop .35s cubic-bezier(.2, .8, .3, 1.15);
+    }
+    @keyframes gate-pop {
+      from { opacity: 0; transform: translateY(10px) scale(.97); }
+      to { opacity: 1; transform: none; }
+    }
+    .gate-card.active { display: block; }
+    .gate-card.shake { animation: gate-shake .4s; }
+    @keyframes gate-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(7px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(4px); }
+    }
+    .gate-icon {
+      display: flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px; margin: 0 auto 16px;
+      background: linear-gradient(135deg, rgba(40, 123, 120, .14), rgba(217, 101, 69, .14));
+      border-radius: 50%; font-size: 24px;
+    }
+    .gate-card h3 { margin: 0 0 10px; color: #173f40; font-size: 20px; line-height: 1.35; }
+    .gate-desc { margin: 0 0 20px; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+    .gate-card input[type="text"], .gate-card input[type="number"] {
+      width: 100%; margin-bottom: 6px; padding: 13px 16px; color: var(--ink);
+      background: #fff; border: 1.5px solid var(--line); border-radius: 11px;
+      font: inherit; font-size: 16px; text-align: center;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .gate-card input[type="text"]::placeholder, .gate-card input[type="number"]::placeholder { color: #b3bdb9; }
+    .gate-card input[type="text"]:focus, .gate-card input[type="number"]:focus {
+      outline: none; border-color: var(--teal); box-shadow: 0 0 0 4px rgba(40, 123, 120, .14);
+    }
+    .gate-error { min-height: 18px; margin: 8px 0 14px; color: var(--accent-dark); font-size: 13.5px; font-weight: 700; }
+    .gate-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .gate-actions button {
+      flex: 1; min-width: 110px; padding: 12px 16px;
+      border-radius: 11px; font-size: 13px; letter-spacing: .03em;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+    }
+    .gate-actions button:active { transform: scale(.97); }
+    .gate-primary {
+      border: 1px solid var(--accent-dark); color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      box-shadow: 0 10px 22px rgba(157, 63, 45, .28);
+    }
+    .gate-primary:hover { color: #fff; background: var(--accent-dark); box-shadow: 0 12px 26px rgba(157, 63, 45, .34); }
+    .gate-secondary {
+      border: 1px solid var(--line); color: var(--muted); background: #fff;
+    }
+    .gate-secondary:hover { color: var(--ink); background: #f3f2ec; }
+
     .shell { display: grid; grid-template-columns: minmax(0, 1fr) 230px; grid-template-areas: "header overview" "preparation overview" "summary overview" "day1 overview" "day2 overview" "day3 overview" "day4 overview" "places overview" "costs overview" "footer overview"; column-gap: 54px; width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
     header { grid-area: header; padding: 64px 0 34px; }
     header, .summary, .day, footer { grid-column: auto; }
@@ -41,7 +108,7 @@
     h1 { max-width: 760px; margin: 0; color: #173f40; font-size: clamp(38px, 7vw, 76px); line-height: .98; letter-spacing: -.03em; }
     .intro { max-width: 650px; margin: 20px 0 0; color: var(--muted); font-size: 18px; }
 
-    .overview { grid-area: overview; position: sticky; top: 28px; align-self: start; margin: 68px 0 0; padding: 22px 0 22px 24px; border-left: 1px solid var(--line); }
+    .overview { grid-area: overview; position: sticky; top: 28px; align-self: start; max-height: calc(100vh - 56px); overflow-y: auto; margin: 68px 0 0; padding: 22px 0 22px 24px; border-left: 1px solid var(--line); }
     .overview-label { margin: 0 0 12px; color: var(--muted); font: 700 11px Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
     .overview-track { position: relative; display: grid; gap: 28px; }
     .overview-track::before { content: ""; position: absolute; top: 8px; bottom: 8px; left: 5px; width: 2px; background: var(--line); }
@@ -50,6 +117,30 @@
     .overview-dot { display: block; width: 11px; height: 11px; margin: 3px 0 0; background: var(--paper); border: 3px solid var(--teal); border-radius: 50%; box-shadow: 0 0 0 5px rgba(40, 123, 120, .08); transition: .2s ease; }
     .overview-day { display: block; color: var(--accent-dark); font: 700 11px Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .overview-title { display: block; margin-top: 4px; color: var(--muted); font-size: 15px; }
+
+    .feedback { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line); }
+    .feedback-form { display: flex; flex-direction: column; gap: 8px; }
+    .feedback-form input, .feedback-form textarea {
+      width: 100%; padding: 9px 11px; color: var(--ink);
+      background: #fff; border: 1px solid var(--line); border-radius: 8px;
+      font: inherit; font-size: 13px;
+    }
+    .feedback-form textarea { min-height: 128px; resize: vertical; }
+    .feedback-form input:focus, .feedback-form textarea:focus {
+      outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(40, 123, 120, .12);
+    }
+    .feedback-form button {
+      padding: 9px 12px; border-radius: 8px; border: 1px solid var(--accent-dark);
+      color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      font: 700 12px Arial, sans-serif; cursor: pointer;
+    }
+    .feedback-form button:hover { background: var(--accent-dark); }
+    .feedback-list { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .feedback-empty { margin: 0; color: var(--muted); font-size: 13px; }
+    .feedback-item { padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: 13px; line-height: 1.45; word-break: break-word; }
+    .feedback-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .feedback-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--muted); font: 700 10px Arial, sans-serif; letter-spacing: .05em; text-transform: uppercase; }
+    .feedback-meta span:first-child { color: var(--accent-dark); }
 
     .summary {
       grid-area: summary;
@@ -162,6 +253,54 @@
   </style>
 </head>
 <body>
+  <script>
+    if (!localStorage.getItem('dalat-gate-passed')) {
+      document.documentElement.classList.add('gate-active');
+    }
+  </script>
+
+  <div class="gate-overlay" id="gate-overlay">
+    <div class="gate-card active" id="gate-step-1">
+      <span class="gate-icon">🔒</span>
+      <h3>Bạn là ai mà lại vào xem kế hoạch chuyến đi Đà Lạt của chúng tôi?</h3>
+      <p class="gate-desc">Nhập tên của bạn để tiếp tục.</p>
+      <input type="text" id="gate-name-input" placeholder="Nhập tên của bạn..." autocomplete="off">
+      <p class="gate-error" id="gate-name-error"></p>
+      <div class="gate-actions"><button class="gate-primary" type="button" id="gate-name-submit">Xác nhận</button></div>
+    </div>
+
+    <div class="gate-card" id="gate-step-2">
+      <span class="gate-icon">🤝</span>
+      <h3>Cam kết trước khi xem</h3>
+      <p class="gate-desc">Để xem được nội dung, bạn cần cam kết 2 điều sau đây. Bạn có muốn tiếp tục không?</p>
+      <p class="gate-error" id="gate-step-2-error"></p>
+      <div class="gate-actions">
+        <button class="gate-primary" type="button" id="gate-step-2-yes">Có</button>
+        <button class="gate-secondary" type="button" id="gate-step-2-no">Không</button>
+      </div>
+    </div>
+
+    <div class="gate-card" id="gate-step-3">
+      <span class="gate-icon">💢</span>
+      <h3>Điều 1</h3>
+      <p class="gate-desc">Bạn sẽ dỗi anh ấy tối đa bao nhiêu lần / tuần?</p>
+      <input type="number" id="gate-count-input" placeholder="Nhập số lần..." min="0" inputmode="numeric">
+      <p class="gate-error" id="gate-count-error"></p>
+      <div class="gate-actions"><button class="gate-primary" type="button" id="gate-count-submit">Xác nhận</button></div>
+    </div>
+
+    <div class="gate-card" id="gate-step-4">
+      <span class="gate-icon">💌</span>
+      <h3>Điều 2</h3>
+      <p class="gate-desc">Có vẻ anh ấy đang dỗi bạn. Bạn có chủ động nhắn tin xin lỗi trước không?</p>
+      <p class="gate-error" id="gate-step-4-error"></p>
+      <div class="gate-actions">
+        <button class="gate-primary" type="button" id="gate-step-4-yes">Có</button>
+        <button class="gate-secondary" type="button" id="gate-step-4-no">Không</button>
+      </div>
+    </div>
+  </div>
+
   <main class="shell">
     <header>
       <p class="eyebrow">Đà Lạt · 4 ngày 3 đêm · 2 người</p>
@@ -176,6 +315,16 @@
         <a class="overview-step" href="#day-2"><span class="overview-dot"></span><span class="overview-day">Ngày 02 - Giáng Sinh</span></a>
         <a class="overview-step" href="#day-3"><span class="overview-dot"></span><span class="overview-day">Ngày 03 - Thiên nhiên</span></a>
         <a class="overview-step" href="#day-4"><span class="overview-dot"></span><span class="overview-day">Ngày 04 - Bay về</span></a>
+      </div>
+
+      <div class="feedback">
+        <p class="overview-label">Đóng góp · Nhận xét · Thu thập ý kiến</p>
+        <form class="feedback-form" id="feedback-form">
+          <input type="text" id="feedback-name" placeholder="Tên của bạn (không bắt buộc)" autocomplete="off">
+          <textarea id="feedback-text" placeholder="Viết góp ý, nhận xét của bạn..." required></textarea>
+          <button type="submit">Gửi góp ý</button>
+        </form>
+        <div class="feedback-list" id="feedback-list"></div>
       </div>
     </nav>
 
@@ -366,6 +515,233 @@
 
     update();
     updateExtras();
+
+    // Lưu log & góp ý vào các file JSON trong repo (data/gate-log.json, data/feedback.json)
+    // qua GitHub Contents API, để ai cũng xem được (không chỉ trên máy vừa nhập).
+    // CẢNH BÁO: token nằm trong mã nguồn công khai của trang, ai xem "View Source"
+    // cũng đọc được. Chỉ dùng Personal Access Token dạng "fine-grained",
+    // giới hạn đúng repo NSNDLongMiu/DaLat, quyền "Contents: Read and write", không hơn.
+    const GITHUB_STORE_CONFIG = {
+      owner: 'NSNDLongMiu',
+      repo: 'DaLat',
+      branch: 'main',
+      token: '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', // fine-grained PAT, chỉ quyền Contents của repo DaLat
+    };
+
+    function createGithubJsonStore(path) {
+      const cfg = GITHUB_STORE_CONFIG;
+      const base = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
+      const headers = { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' };
+      let queue = Promise.resolve();
+
+      function decode(file) {
+        return JSON.parse(decodeURIComponent(escape(atob(file.content))) || '[]');
+      }
+      function encode(data) {
+        return btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+      }
+
+      function mutate(mutator, message) {
+        const run = async () => {
+          const getRes = await fetch(`${base}?ref=${cfg.branch}`, { headers });
+          if (!getRes.ok) throw new Error(`Đọc ${path} thất bại: ${getRes.status}`);
+          const file = await getRes.json();
+          const next = mutator(decode(file));
+          const putRes = await fetch(base, {
+            method: 'PUT',
+            headers: { ...headers, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, content: encode(next), sha: file.sha, branch: cfg.branch }),
+          });
+          if (!putRes.ok) throw new Error(`Ghi ${path} thất bại: ${putRes.status}`);
+          return next;
+        };
+        const result = queue.then(run, run);
+        queue = result.catch(() => {});
+        return result;
+      }
+
+      return { mutate };
+    }
+
+    const gateLogStore = createGithubJsonStore('data/gate-log.json');
+    const feedbackStore = createGithubJsonStore('data/feedback.json');
+
+    (function initFeedback() {
+      const form = document.querySelector('#feedback-form');
+      if (!form) return;
+      const nameInput = document.querySelector('#feedback-name');
+      const textInput = document.querySelector('#feedback-text');
+      const list = document.querySelector('#feedback-list');
+      let comments = [];
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function renderComments() {
+        if (!comments.length) {
+          list.innerHTML = '<p class="feedback-empty">Chưa có góp ý nào, hãy là người đầu tiên!</p>';
+          return;
+        }
+        list.innerHTML = [...comments].reverse().map(c => `
+          <div class="feedback-item">
+            <div class="feedback-meta">
+              <span>${escapeHtml(c.name || 'Ẩn danh')}</span>
+              <span>${new Date(c.time).toLocaleString('vi-VN')}</span>
+            </div>
+            <div>${escapeHtml(c.text)}</div>
+          </div>`).join('');
+      }
+
+      async function loadRemoteComments() {
+        try {
+          const res = await fetch(`data/feedback.json?t=${Date.now()}`);
+          if (res.ok) comments = await res.json();
+        } catch (err) {
+          console.warn('feedback load error:', err);
+        }
+        renderComments();
+      }
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const text = textInput.value.trim();
+        if (!text) return;
+        const entry = { time: new Date().toISOString(), name: nameInput.value.trim(), text };
+        comments.push(entry);
+        renderComments();
+        textInput.value = '';
+        if (!GITHUB_STORE_CONFIG.token) return;
+        feedbackStore
+          .mutate(data => { data.push(entry); return data; }, `feedback: ${entry.name || 'Ẩn danh'}`)
+          .catch(err => console.warn('feedback save error:', err));
+      });
+
+      loadRemoteComments();
+    })();
+
+    (function initGateLogger(store) {
+      let sessionName = '';
+      let ipPromise = null;
+
+      function getIp() {
+        if (!ipPromise) {
+          ipPromise = fetch('https://api.ipify.org?format=json')
+            .then(res => res.json())
+            .then(data => data.ip)
+            .catch(() => 'unknown');
+        }
+        return ipPromise;
+      }
+
+      window.gateLog = {
+        setName(name) { sessionName = name; },
+        log(question, answer) {
+          if (!GITHUB_STORE_CONFIG.token) return; // chưa cấu hình token, bỏ qua log thay vì báo lỗi cho người dùng
+          getIp()
+            .then(ip => store.mutate(data => {
+              data.push({ time: new Date().toISOString(), name: sessionName, ip, question, answer });
+              return data;
+            }, `log: ${question} → ${answer}`))
+            .catch(err => console.warn('gateLog error:', err));
+        },
+      };
+    })(gateLogStore);
+
+    (function initGate() {
+      const overlay = document.querySelector('#gate-overlay');
+      if (!overlay) return;
+
+      const acceptedNames = ['long', 'uyen', 'uyn', 'bui thi minh uyen', 'em be'];
+      function normalizeVN(str) {
+        return (str || '')
+          .toLowerCase()
+          .replace(/đ/g, 'd')
+          .normalize('NFD')
+          .replace(/[̀-ͯ]/g, '')
+          .trim()
+          .replace(/\s+/g, ' ');
+      }
+
+      const cards = [...overlay.querySelectorAll('.gate-card')];
+      function showStep(id) {
+        cards.forEach(card => card.classList.toggle('active', card.id === id));
+      }
+      function shakeCard(card) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+
+      const nameQuestion = 'Bạn là ai mà lại vào xem kế hoạch chuyến đi Đà Lạt của chúng tôi?';
+      const nameInput = document.querySelector('#gate-name-input');
+      const nameError = document.querySelector('#gate-name-error');
+      function submitName() {
+        const raw = nameInput.value.trim();
+        window.gateLog.setName(raw);
+        if (acceptedNames.includes(normalizeVN(raw))) {
+          window.gateLog.log(nameQuestion, raw);
+          nameError.textContent = '';
+          showStep('gate-step-2');
+        } else {
+          window.gateLog.log(nameQuestion, `${raw} (sai)`);
+          nameError.textContent = 'Bạn không có quyền truy cập.';
+          shakeCard(document.querySelector('#gate-step-1'));
+          nameInput.focus();
+        }
+      }
+      document.querySelector('#gate-name-submit').addEventListener('click', submitName);
+      nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitName(); });
+
+      const step2Question = 'Bạn có đồng ý cam kết 2 điều tiếp theo để xem nội dung không?';
+      const step2Error = document.querySelector('#gate-step-2-error');
+      document.querySelector('#gate-step-2-yes').addEventListener('click', () => {
+        window.gateLog.log(step2Question, 'Có');
+        step2Error.textContent = '';
+        showStep('gate-step-3');
+      });
+      document.querySelector('#gate-step-2-no').addEventListener('click', () => {
+        window.gateLog.log(step2Question, 'Không');
+        step2Error.textContent = 'Tính năng này không hoạt động.';
+        shakeCard(document.querySelector('#gate-step-2'));
+      });
+
+      const countQuestion = 'Bạn sẽ dỗi anh ấy tối đa bao nhiêu lần / tuần?';
+      const countInput = document.querySelector('#gate-count-input');
+      const countError = document.querySelector('#gate-count-error');
+      function submitCount() {
+        const raw = countInput.value.trim();
+        const value = Number(raw);
+        if (raw !== '' && Number.isFinite(value) && value >= 0 && value <= 2) {
+          window.gateLog.log(countQuestion, raw);
+          countError.textContent = '';
+          showStep('gate-step-4');
+        } else {
+          window.gateLog.log(countQuestion, `${raw} (quá nhiều)`);
+          countError.textContent = 'Nhiều vậy chắc anh ấy chịu không nổi mất, thử số nhỏ hơn xem!';
+          shakeCard(document.querySelector('#gate-step-3'));
+        }
+      }
+      document.querySelector('#gate-count-submit').addEventListener('click', submitCount);
+      countInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitCount(); });
+
+      const step4Question = 'Bạn có chủ động nhắn tin xin lỗi trước không?';
+      const step4Error = document.querySelector('#gate-step-4-error');
+      document.querySelector('#gate-step-4-yes').addEventListener('click', () => {
+        window.gateLog.log(step4Question, 'Có');
+        step4Error.textContent = '';
+        document.documentElement.classList.remove('gate-active');
+        localStorage.setItem('dalat-gate-passed', '1');
+      });
+      document.querySelector('#gate-step-4-no').addEventListener('click', () => {
+        window.gateLog.log(step4Question, 'Không');
+        step4Error.textContent = 'Tính năng này không hoạt động.';
+        shakeCard(document.querySelector('#gate-step-4'));
+      });
+    })();
   </script>
 </body>
 </html>
