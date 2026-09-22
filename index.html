@@ -516,55 +516,27 @@
     update();
     updateExtras();
 
-    // Lưu log & góp ý vào các file JSON trong repo (data/gate-log.json, data/feedback.json)
-    // qua GitHub Contents API, để ai cũng xem được (không chỉ trên máy vừa nhập).
-    // CẢNH BÁO: token nằm trong mã nguồn công khai của trang, ai xem "View Source"
-    // cũng đọc được. Chỉ dùng Personal Access Token dạng "fine-grained",
-    // giới hạn đúng repo NSNDLongMiu/DaLat, quyền "Contents: Read and write", không hơn.
-    const GITHUB_STORE_CONFIG = {
-      owner: 'NSNDLongMiu',
-      repo: 'DaLat',
-      branch: 'main',
-      token: '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', // fine-grained PAT, chỉ quyền Contents của repo DaLat
-    };
+    // Lưu log & góp ý qua Google Apps Script Web App (không lộ credential nào ở phía
+    // trình duyệt — script chạy trên server của Google, chỉ gọi qua 1 URL công khai).
+    // Dán URL Web App (kết thúc bằng /exec) sau khi deploy Apps Script vào đây.
+    const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz_OjUR-TrvgyljrwMQgoYQ3MXaxUlXV5gzXkcn0y_pSPwGXJ2N0jxVqrWkne0PI7NclQ/exec';
 
-    function createGithubJsonStore(path) {
-      const cfg = GITHUB_STORE_CONFIG;
-      const base = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`;
-      const headers = { Authorization: `token ${cfg.token}`, Accept: 'application/vnd.github+json' };
-      let queue = Promise.resolve();
-
-      function decode(file) {
-        return JSON.parse(decodeURIComponent(escape(atob(file.content))) || '[]');
-      }
-      function encode(data) {
-        return btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
-      }
-
-      function mutate(mutator, message) {
-        const run = async () => {
-          const getRes = await fetch(`${base}?ref=${cfg.branch}`, { headers });
-          if (!getRes.ok) throw new Error(`Đọc ${path} thất bại: ${getRes.status}`);
-          const file = await getRes.json();
-          const next = mutator(decode(file));
-          const putRes = await fetch(base, {
-            method: 'PUT',
-            headers: { ...headers, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, content: encode(next), sha: file.sha, branch: cfg.branch }),
-          });
-          if (!putRes.ok) throw new Error(`Ghi ${path} thất bại: ${putRes.status}`);
-          return next;
-        };
-        const result = queue.then(run, run);
-        queue = result.catch(() => {});
-        return result;
-      }
-
-      return { mutate };
+    function gasGet(kind) {
+      if (!GAS_ENDPOINT) return Promise.resolve([]);
+      return fetch(`${GAS_ENDPOINT}?kind=${kind}&t=${Date.now()}`)
+        .then(res => res.json())
+        .catch(err => { console.warn(`gas get(${kind}) error:`, err); return []; });
     }
 
-    const gateLogStore = createGithubJsonStore('data/gate-log.json');
-    const feedbackStore = createGithubJsonStore('data/feedback.json');
+    function gasPost(payload) {
+      if (!GAS_ENDPOINT) return Promise.resolve();
+      // Content-Type: text/plain tránh trình duyệt gửi CORS preflight (Apps Script không xử lý OPTIONS).
+      return fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      }).catch(err => console.warn('gas post error:', err));
+    }
 
     (function initFeedback() {
       const form = document.querySelector('#feedback-form');
@@ -597,12 +569,7 @@
       }
 
       async function loadRemoteComments() {
-        try {
-          const res = await fetch(`data/feedback.json?t=${Date.now()}`);
-          if (res.ok) comments = await res.json();
-        } catch (err) {
-          console.warn('feedback load error:', err);
-        }
+        comments = await gasGet('feedback');
         renderComments();
       }
 
@@ -614,16 +581,13 @@
         comments.push(entry);
         renderComments();
         textInput.value = '';
-        if (!GITHUB_STORE_CONFIG.token) return;
-        feedbackStore
-          .mutate(data => { data.push(entry); return data; }, `feedback: ${entry.name || 'Ẩn danh'}`)
-          .catch(err => console.warn('feedback save error:', err));
+        gasPost({ kind: 'feedback', ...entry });
       });
 
       loadRemoteComments();
     })();
 
-    (function initGateLogger(store) {
+    (function initGateLogger() {
       let sessionName = '';
       let ipPromise = null;
 
@@ -640,16 +604,17 @@
       window.gateLog = {
         setName(name) { sessionName = name; },
         log(question, answer) {
-          if (!GITHUB_STORE_CONFIG.token) return; // chưa cấu hình token, bỏ qua log thay vì báo lỗi cho người dùng
-          getIp()
-            .then(ip => store.mutate(data => {
-              data.push({ time: new Date().toISOString(), name: sessionName, ip, question, answer });
-              return data;
-            }, `log: ${question} → ${answer}`))
-            .catch(err => console.warn('gateLog error:', err));
+          getIp().then(ip => gasPost({
+            kind: 'gate-log',
+            time: new Date().toISOString(),
+            name: sessionName,
+            ip,
+            question,
+            answer,
+          }));
         },
       };
-    })(gateLogStore);
+    })();
 
     (function initGate() {
       const overlay = document.querySelector('#gate-overlay');

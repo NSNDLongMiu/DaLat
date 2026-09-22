@@ -46,11 +46,14 @@
 <body>
   <main>
     <h1>Nhật ký trả lời</h1>
-    <p class="sub">Đọc trực tiếp từ <code>data/gate-log.json</code> trong repo.</p>
+    <p class="sub">Đọc trực tiếp từ Google Apps Script.</p>
     <button id="reload" type="button">Tải lại</button>
     <div id="output"></div>
   </main>
   <script>
+    // Dán đúng URL Web App Apps Script (kết thúc bằng /exec) giống trong index.html.
+    const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz_OjUR-TrvgyljrwMQgoYQ3MXaxUlXV5gzXkcn0y_pSPwGXJ2N0jxVqrWkne0PI7NclQ/exec';
+
     const output = document.querySelector('#output');
 
     function renderState(message, isError) {
@@ -90,14 +93,18 @@
     }
 
     async function load() {
+      if (!GAS_ENDPOINT) {
+        renderState('Chưa cấu hình GAS_ENDPOINT trong viewer.html — dán URL Web App Apps Script vào đó trước.', true);
+        return;
+      }
       renderState('Đang tải...', false);
       try {
-        const res = await fetch(`data/gate-log.json?t=${Date.now()}`);
+        const res = await fetch(`${GAS_ENDPOINT}?kind=gate-log&t=${Date.now()}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const entries = await res.json();
         renderEntries(entries);
       } catch (err) {
-        renderState(`Không tải được data/gate-log.json (${err.message}). Nếu bạn đang mở file cục bộ (file://), hãy chạy qua một server tĩnh hoặc mở trên GitHub Pages.`, true);
+        renderState(`Không tải được dữ liệu (${err.message}).`, true);
       }
     }
 
