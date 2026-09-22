@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Timeline Đà Lạt | 24–27/12/2026</title>
+  <style>
+    :root {
+      --ink: #202b2d;
+      --muted: #6d7c7c;
+      --paper: #f7f5ef;
+      --card: #fffdf8;
+      --line: #d8dfd8;
+      --accent: #d96545;
+      --accent-dark: #9d3f2d;
+      --teal: #287b78;
+      --shadow: 0 18px 45px rgba(35, 52, 47, .10);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(217, 101, 69, .12), transparent 28rem),
+        linear-gradient(135deg, #f8f5ed 0%, #eef4ee 100%);
+      font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
+      line-height: 1.5;
+    }
+
+    .shell { display: grid; grid-template-columns: minmax(0, 1fr) 230px; grid-template-areas: "header overview" "preparation overview" "summary overview" "day1 overview" "day2 overview" "day3 overview" "day4 overview" "places overview" "costs overview" "footer overview"; column-gap: 54px; width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    header { grid-area: header; padding: 64px 0 34px; }
+    header, .summary, .day, footer { grid-column: auto; }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--accent-dark);
+      font: 700 12px/1.2 Arial, sans-serif;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    h1 { max-width: 760px; margin: 0; color: #173f40; font-size: clamp(38px, 7vw, 76px); line-height: .98; letter-spacing: -.03em; }
+    .intro { max-width: 650px; margin: 20px 0 0; color: var(--muted); font-size: 18px; }
+
+    .overview { grid-area: overview; position: sticky; top: 28px; align-self: start; margin: 68px 0 0; padding: 22px 0 22px 24px; border-left: 1px solid var(--line); }
+    .overview-label { margin: 0 0 12px; color: var(--muted); font: 700 11px Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+    .overview-track { position: relative; display: grid; gap: 28px; }
+    .overview-track::before { content: ""; position: absolute; top: 8px; bottom: 8px; left: 5px; width: 2px; background: var(--line); }
+    .overview-step { position: relative; display: grid; grid-template-columns: 16px 1fr; column-gap: 12px; min-width: 0; color: var(--ink); text-decoration: none; }
+    .overview-step:hover .overview-dot { background: var(--accent); transform: scale(1.15); }
+    .overview-dot { display: block; width: 11px; height: 11px; margin: 3px 0 0; background: var(--paper); border: 3px solid var(--teal); border-radius: 50%; box-shadow: 0 0 0 5px rgba(40, 123, 120, .08); transition: .2s ease; }
+    .overview-day { display: block; color: var(--accent-dark); font: 700 11px Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .overview-title { display: block; margin-top: 4px; color: var(--muted); font-size: 15px; }
+
+    .summary {
+      grid-area: summary;
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) minmax(220px, 1.6fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin: 20px 0 52px;
+      padding: 18px 22px;
+      background: rgba(255, 253, 248, .84);
+      border: 1px solid rgba(216, 223, 216, .9);
+      box-shadow: var(--shadow);
+    }
+    .summary strong { display: block; font-size: 25px; }
+    .summary span { color: var(--muted); font: 12px Arial, sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+    .progress-track { height: 9px; overflow: hidden; background: #e7ebe5; border-radius: 99px; }
+    .progress-bar { width: 0; height: 100%; background: linear-gradient(90deg, var(--teal), var(--accent)); transition: width .3s ease; }
+    button {
+      border: 1px solid var(--accent-dark);
+      padding: 10px 14px;
+      color: var(--accent-dark);
+      background: transparent;
+      font: 700 12px Arial, sans-serif;
+      cursor: pointer;
+    }
+    button:hover { color: #fff; background: var(--accent-dark); }
+
+    .day { position: relative; margin: 0 0 52px; }
+    #day-1 { grid-area: day1; }
+    #day-2 { grid-area: day2; }
+    #day-3 { grid-area: day3; }
+    #day-4 { grid-area: day4; }
+    .day-heading {
+      display: flex;
+      gap: 18px;
+      align-items: baseline;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .day-number { color: var(--accent); font-size: 19px; font-weight: 700; }
+    h2 { margin: 0; font-size: clamp(23px, 4vw, 34px); line-height: 1.05; }
+    .day-note { margin: 8px 0 0; color: var(--muted); font-style: italic; }
+
+    .timeline { position: relative; margin-left: 18px; padding-left: 35px; }
+    .timeline::before { content: ""; position: absolute; top: 10px; bottom: 10px; left: 0; width: 2px; background: var(--line); }
+    .event { position: relative; margin: 0 0 16px; padding: 17px 20px; background: var(--card); border: 1px solid rgba(216, 223, 216, .85); box-shadow: 0 7px 20px rgba(35, 52, 47, .055); transition: border-color .2s, transform .2s, opacity .2s; }
+    .event::before { content: ""; position: absolute; top: 24px; left: -42px; width: 13px; height: 13px; background: var(--paper); border: 3px solid var(--teal); border-radius: 50%; box-shadow: 0 0 0 5px rgba(40, 123, 120, .08); }
+    .event:hover { border-color: var(--teal); transform: translateX(3px); }
+    .event.done { opacity: .55; }
+    .event.done .event-title { text-decoration: line-through; }
+    .event-top { display: flex; gap: 14px; align-items: flex-start; }
+    .event input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; accent-color: var(--teal); }
+    .event-title { margin: 0; font-size: 18px; font-weight: 700; }
+    .event-time { display: inline-block; margin: 0 0 8px 32px; padding: 5px 9px; color: #fff; background: var(--accent-dark); font: 700 11px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .event-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 7px 0 0 32px; color: var(--muted); font: 12px Arial, sans-serif; }
+    .tag { display: inline-block; padding: 4px 8px; background: #edf4f0; color: #35645f; }
+    .event-note { margin: 9px 0 0 32px; color: var(--muted); font-size: 15px; }
+    .extras { margin: 12px 0 52px; }
+    #preparation { grid-area: preparation; }
+    #places { grid-area: places; }
+    #costs { grid-area: costs; }
+    .extras-heading { margin: 0 0 22px; padding-bottom: 12px; border-bottom: 1px solid var(--line); font-size: clamp(26px, 4vw, 38px); }
+    .extras-intro { max-width: 720px; margin: -10px 0 24px; color: var(--muted); }
+    .prep-grid, .place-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .prep-group, .place-group, .costs { padding: 20px; background: rgba(255, 253, 248, .84); border: 1px solid rgba(216, 223, 216, .9); border-radius: 14px; box-shadow: 0 10px 28px rgba(35, 52, 47, .06); }
+    .prep-group h3, .place-group h3 { margin: 0 0 14px; color: var(--accent-dark); font-size: 19px; }
+    .prep-item, .place-item { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; color: var(--ink); font-size: 15px; }
+    .prep-item input, .place-item input { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 3px; accent-color: var(--teal); }
+    .prep-item.done, .place-item.done { color: var(--muted); text-decoration: line-through; }
+    .place-group { margin-top: 12px; }
+    .place-group small { display: block; margin-top: -8px; color: var(--muted); font: 12px Arial, sans-serif; }
+    .costs { margin-top: 12px; overflow-x: auto; }
+    .costs table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .costs th, .costs td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .costs th { color: var(--accent-dark); font: 700 11px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    .cost-total { color: var(--accent-dark); font-weight: 700; }
+    .prep-progress { margin: 0 0 16px; color: var(--muted); font: 700 12px Arial, sans-serif; }
+
+    footer { grid-area: footer; padding: 10px 0 54px; color: var(--muted); font: 12px Arial, sans-serif; }
+    @media (max-width: 700px) {
+      .shell { width: min(100% - 22px, 560px); }
+      header { padding-top: 38px; }
+      .summary { grid-template-columns: 1fr; margin-bottom: 38px; }
+      .summary button { width: 100%; }
+      .shell { display: block; }
+      .overview { position: static; margin: 0 0 34px; padding: 18px 0 18px 18px; }
+      header { order: 1; }
+      #preparation { order: 2; }
+      .overview { order: 3; }
+      .summary { order: 4; }
+      #day-1 { order: 5; }
+      #day-2 { order: 6; }
+      #day-3 { order: 7; }
+      #day-4 { order: 8; }
+      #places { order: 9; }
+      #costs { order: 10; }
+      footer { order: 11; }
+      .overview-track { gap: 20px; }
+      .overview-title { font-size: 13px; }
+      .prep-grid, .place-grid { grid-template-columns: 1fr; }
+      .extras { margin-bottom: 34px; }
+      .day-heading { display: block; }
+      .day-number { display: block; margin-bottom: 7px; }
+      .timeline { margin-left: 9px; padding-left: 26px; }
+      .event { padding: 15px; }
+      .event::before { left: -34px; }
+      .event-title { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">Đà Lạt · 4 ngày 3 đêm · 2 người</p>
+      <h1>Một chuyến đi có nhịp điệu riêng.</h1>
+      <p class="intro">Timeline di chuyển và trải nghiệm từ ngày 24 đến 27/12/2026. Tích vào từng mục để theo dõi tiến độ chuẩn bị. Khung giờ là lịch dự kiến, cần điều chỉnh theo vé bay, giờ tàu và thời tiết.</p>
+    </header>
+
+    <nav class="overview" aria-label="Tổng quan lịch trình">
+      <p class="overview-label">Tổng quan hành trình</p>
+      <div class="overview-track">
+        <a class="overview-step" href="#day-1"><span class="overview-dot"></span><span class="overview-day">Ngày 01 - Đến Đà Lạt</span></a>
+        <a class="overview-step" href="#day-2"><span class="overview-dot"></span><span class="overview-day">Ngày 02 - Giáng Sinh</span></a>
+        <a class="overview-step" href="#day-3"><span class="overview-dot"></span><span class="overview-day">Ngày 03 - Thiên nhiên</span></a>
+        <a class="overview-step" href="#day-4"><span class="overview-dot"></span><span class="overview-day">Ngày 04 - Bay về</span></a>
+      </div>
+    </nav>
+
+    <section class="summary" aria-label="Tiến độ chuyến đi">
+      <div><strong id="counter">0/37</strong><span>mục đã hoàn thành</span></div>
+      <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+      <button id="reset" type="button">Đặt lại checklist</button>
+    </section>
+
+    <section class="day" id="day-1">
+      <div class="day-heading"><span class="day-number">NGÀY 01</span><div><h2>Thứ Năm · 24/12/2026</h2><p class="day-note">Đến Đà Lạt & Đêm Giáng Sinh</p></div></div>
+      <div class="timeline">
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Di chuyển từ nhà ra Nội Bài hoặc Cát Bi</h3></div><p class="event-note">Đến trước 40–40 phút để ký gửi hành lý.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng: Bay đến sân bay Liên Khương</h3></div><p class="event-note">Có thể ăn sáng tại sân bay.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Di chuyển từ Liên Khương về trung tâm thành phố</h3></div><div class="event-meta"><span class="tag">Khoảng 40 phút</span></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn trưa: Bún bò Đà Lạt hoặc bánh ướt lòng gà</h3></div><div class="event-meta"><span class="tag">Đặc sản</span></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Chiều: Dạo Hồ Xuân Hương, cafe view hồ</h3></div><p class="event-note">Nghỉ ngơi sau chuyến bay; chọn phương án thuê xe.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Xế: Cà phê, bánh tráng nướng, sữa đậu nành nóng</h3></div><p class="event-note">Lựa chọn không ưu tiên thực hiện.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Tối: Chợ đêm, phố đi bộ Hòa Bình, Nhà thờ Con Gà</h3></div><p class="event-note">Chụp ảnh Nhà thờ Con Gà trang trí Noel.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn tối đặc biệt đêm Giáng Sinh</h3></div><p class="event-note">Đã đặt bàn trước; set menu hoặc lẩu tại nhà hàng trung tâm.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Đêm: Về nghỉ sớm hoặc dạo quanh khách sạn</h3></div><p class="event-note">Ăn khuya tuỳ chọn: kem bơ, chè nóng hoặc bánh tráng nướng chợ đêm.</p></article>
+      </div>
+    </section>
+
+    <section class="day" id="day-2">
+      <div class="day-heading"><span class="day-number">NGÀY 02</span><div><h2>Thứ Sáu · 25/12/2026</h2><p class="day-note">Giáng Sinh · Khám phá điểm nổi bật</p></div></div>
+      <div class="timeline">
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng: Thức dậy sớm</h3></div><p class="event-note">Đón bình minh.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn sáng: Bánh mì xíu mại hoặc bánh căn nóng</h3></div><p class="event-note">Dùng cùng cà phê sữa đá.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng: Thung lũng Tình Yêu</h3></div><p class="event-note">Check-in, đạp xe quanh hồ; nên đi sớm khoảng 8h để tránh đông.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Trưa: Về khu trung tâm</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn trưa: Nem nướng Đà Lạt</h3></div><p class="event-note">Cuốn bánh tráng.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Chiều: Quảng trường Lâm Viên → Ga Đà Lạt → Crazy House</h3></div><p class="event-note">Tham quan kiến trúc cổ và check-in.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Đi tàu cổ Ga Đà Lạt – Trại Mát</h3></div><p class="event-note">Tham quan ga, ngắm cung đường và ghé Chùa Linh Phước nếu còn đủ thời gian. Kiểm tra giờ tàu và đặt vé trước vì là mùa cao điểm.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Xế: Kem bơ hoặc sữa chua phô mai</h3></div><p class="event-note">Gần khu Hòa Bình.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Tối: Dạo phố nhẹ nhàng</h3></div><p class="event-note">Thường đỡ đông hơn đêm 24.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn tối: Lẩu bò, lẩu nướng hoặc lẩu gà lá é</h3></div></article>
+      </div>
+    </section>
+
+    <section class="day" id="day-3">
+      <div class="day-heading"><span class="day-number">NGÀY 03</span><div><h2>Thứ Bảy · 26/12/2026</h2><p class="day-note">Buổi chụp ảnh & Thiên nhiên · Ngày dự kiến mệt nhất</p></div></div>
+      <div class="timeline">
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng sớm (~5h): Cà phê mang đi và bánh ngọt</h3></div><p class="event-note">Lót dạ trước khi ra ngoài.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng sớm (~5h30–7h30): Chụp bộ ảnh cặp đôi tại Đồi chè Cầu Đất</h3></div><p class="event-note">Canh bình minh; mang theo trang phục và phụ kiện đã chuẩn bị.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng muộn: Về nghỉ ngơi, đổi đồ</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn sáng muộn: Xíu mại nóng hoặc bánh ướt lòng gà</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng muộn: Thiền viện Trúc Lâm, cáp treo, Hồ Tuyền Lâm</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Trưa: Ăn trưa đặc sản</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn trưa: Gà nướng cơm lam hoặc lẩu bò vùng ven hồ</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Chiều: Vườn hoa thành phố hoặc vườn dâu tây</h3></div><p class="event-note">Check-in, cafe view đồi thông.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Xế: Cà phê đồi thông và bánh tráng nướng</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Cuối chiều: Săn hoàng hôn ở Dốc Nhà Bò</h3></div><div class="event-meta"><span class="tag">Khoảng 16h30–18h</span></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Tối: Mua sắm đặc sản, thư giãn cuối chuyến</h3></div><p class="event-note">Mứt, trà, cà phê.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn tối: Ăn vặt chợ đêm</h3></div><p class="event-note">Bánh tráng nướng, bánh căn, sữa đậu nành, hột vịt lộn xào me.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Live show: Đi xem live ca nhạc</h3></div><p class="event-note">Đặt một show ca nhạc sớm; kiểm tra lịch biểu diễn và địa điểm gần ngày đi.</p></article>
+      </div>
+    </section>
+
+    <section class="day" id="day-4">
+      <div class="day-heading"><span class="day-number">NGÀY 04</span><div><h2>Chủ Nhật · 27/12/2026</h2><p class="day-note">Chill sáng & bay về</p></div></div>
+      <div class="timeline">
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Sáng: Cafe sáng chill, mua nốt quà lưu niệm</h3></div><p class="event-note">Mua thêm đặc sản nếu cần.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn sáng: Phở hoặc bánh mì Đà Lạt</h3></div><p class="event-note">Dùng cùng cà phê.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Trưa: Trả phòng</h3></div></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Ăn trưa nhẹ: Bún riêu hoặc bánh canh</h3></div><p class="event-note">Ăn gần khách sạn trước khi ra sân bay.</p></article>
+        <article class="event"><div class="event-top"><input type="checkbox"><h3 class="event-title">Chiều: Ra sân bay Liên Khương và bay về</h3></div><p class="event-note">Canh giờ trước chuyến bay khoảng 2 tiếng.</p></article>
+      </div>
+    </section>
+
+    <section class="extras" id="preparation">
+      <h2 class="extras-heading">Checklist chuẩn bị</h2>
+      <p class="extras-intro">Các việc cần chốt trước chuyến đi, tách riêng với 37 mốc trong lịch trình.</p>
+      <p class="prep-progress" id="prep-counter">0/12 mục đã hoàn thành</p>
+      <div class="prep-grid">
+        <div class="prep-group">
+          <h3>Đặt trước · ưu tiên số 1</h3>
+          <label class="prep-item"><input type="checkbox"><span>Vé máy bay khứ hồi đi và về Liên Khương <small>Có thể bay từ Cát Bi hoặc Nội Bài.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Xe đưa đón sân bay Liên Khương ↔ trung tâm Đà Lạt <small>Khoảng 30–45 phút; có thể thay bằng taxi.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Phòng khách sạn hoặc homestay 3 đêm <small>Chốt sớm vì dịp Noel dễ hết phòng.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Đặt bàn nhà hàng tối 24/12 <small>Ưu tiên đặt trước ít nhất một buổi ăn đặc biệt.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Thuê xe máy hoặc đặt xe di chuyển trong ngày</span></label>
+          <label class="prep-item"><input type="checkbox"><span>Mua vé trước các điểm giới hạn vé <small>Ví dụ cáp treo Trúc Lâm; không bắt buộc.</small></span></label>
+        </div>
+        <div class="prep-group">
+          <h3>Kế hoạch chụp bộ ảnh</h3>
+          <label class="prep-item"><input type="checkbox"><span>Chốt concept/phong cách ảnh <small>Giáng Sinh, vintage, đồi thông hoặc hoa.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Đặt lịch studio hoặc photographer</span></label>
+          <label class="prep-item"><input type="checkbox"><span>Chọn và đặt trước địa điểm chụp <small>Đồi chè, vườn hoa, phố cổ hoặc quảng trường.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Chuẩn bị 2–3 bộ trang phục chụp ảnh</span></label>
+          <label class="prep-item"><input type="checkbox"><span>Chuẩn bị phụ kiện <small>Mũ, khăn, hoa cầm tay, kính.</small></span></label>
+          <label class="prep-item"><input type="checkbox"><span>Kiểm tra thời tiết ngày chụp <small>Chọn khung giờ ánh sáng đẹp: sáng sớm hoặc hoàng hôn.</small></span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="extras" id="places">
+      <h2 class="extras-heading">Danh sách địa điểm & ăn uống</h2>
+      <p class="extras-intro">Chọn thêm các điểm dự phòng theo thời tiết, sức khỏe và thời gian thực tế.</p>
+      <div class="place-grid">
+        <div class="place-group"><h3>Trung tâm thành phố</h3><label class="place-item"><input type="checkbox"><span>Hồ Xuân Hương · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Quảng trường Lâm Viên · ★★★</span></label><label class="place-item"><input type="checkbox"><span>Nhà thờ Con Gà · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Ga Đà Lạt · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Chợ Đà Lạt & chợ đêm Âm Phủ · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Crazy House · ★★★★</span></label></div>
+        <div class="place-group"><h3>Thiên nhiên & sinh thái</h3><label class="place-item"><input type="checkbox"><span>Thung lũng Tình Yêu · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Thiền viện Trúc Lâm + cáp treo · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Hồ Tuyền Lâm · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Đồi chè Cầu Đất · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Vườn hoa thành phố · ★★★</span></label><label class="place-item"><input type="checkbox"><span>Vườn dâu tây · ★★★</span></label><label class="place-item"><input type="checkbox"><span>Thác Datanla hoặc Prenn · ★★★</span></label></div>
+        <div class="place-group"><h3>Tâm linh, văn hóa & hoàng hôn</h3><label class="place-item"><input type="checkbox"><span>Chùa Linh Phước · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Dốc Nhà Bò · săn hoàng hôn</span></label><label class="place-item"><input type="checkbox"><span>Dinh Bảo Đại · ★★★</span></label><label class="place-item"><input type="checkbox"><span>Làng Cù Lần · ★★★</span></label></div>
+        <div class="place-group"><h3>Cafe view đẹp</h3><label class="place-item"><input type="checkbox"><span>Là Việt Coffee · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Túi Mơ To · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Horizon Coffee · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Mê Linh Coffee Garden · ★★★★★</span></label></div>
+        <div class="place-group"><h3>Món nên thử</h3><label class="place-item"><input type="checkbox"><span>Bánh ướt lòng gà · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Bánh căn · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Bánh mì xíu mại · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Bún bò Đà Lạt · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Nem nướng · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Lẩu gà lá é · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Lẩu bò / nướng đá · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Gà nướng cơm lam · ★★★</span></label></div>
+        <div class="place-group"><h3>Ăn vặt & đồ uống</h3><label class="place-item"><input type="checkbox"><span>Bánh tráng nướng · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Kem bơ · ★★★★★</span></label><label class="place-item"><input type="checkbox"><span>Sữa đậu nành nóng · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Chè nóng · ★★★</span></label><label class="place-item"><input type="checkbox"><span>Cà phê sữa đá / cà phê trứng · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Trà atiso nóng · ★★★★</span></label><label class="place-item"><input type="checkbox"><span>Sữa chua phô mai · ★★★★</span></label></div>
+      </div>
+    </section>
+
+    <section class="extras" id="costs">
+      <h2 class="extras-heading">Ước tính chi phí</h2>
+      <div class="costs"><table><thead><tr><th>Hạng mục</th><th>Ước tính</th><th>Ghi chú</th></tr></thead><tbody>
+        <tr><td>Vé máy bay khứ hồi</td><td>2.200.000đ</td><td>Cao điểm Noel, nên đặt sớm.</td></tr>
+        <tr><td>Xe sân bay khứ hồi</td><td>450.000đ</td><td>Xe ghép hoặc taxi chia sẻ.</td></tr>
+        <tr><td>Khách sạn/homestay 3 đêm</td><td>2.250.000đ</td><td>Khoảng 750.000đ/đêm.</td></tr>
+        <tr><td>Ăn uống</td><td>1.800.000đ</td><td>Cho 4 ngày, 2 người.</td></tr>
+        <tr><td>Vé tham quan & trải nghiệm</td><td>350.000đ</td><td>Cáp treo và điểm check-in.</td></tr>
+        <tr><td>Chụp bộ ảnh cặp đôi</td><td>800.000đ</td><td>Gói cơ bản, chưa gồm trang phục.</td></tr>
+        <tr><td>Thuê xe máy 4 ngày</td><td>480.000đ</td><td>Khoảng 120.000đ/ngày.</td></tr>
+        <tr><td>Mua sắm/đặc sản</td><td>600.000đ</td><td>Mứt, trà, cà phê.</td></tr>
+        <tr class="cost-total"><td>Tổng ước tính</td><td>~8.930.000đ</td><td>Sát mức trần 9 triệu.</td></tr>
+      </tbody></table></div>
+    </section>
+
+    <footer>Timeline được dựng từ file “Kế hoạch, lịch trình di chuyển.md”. Trạng thái checklist được lưu trên trình duyệt này.</footer>
+  </main>
+  <script>
+    const boxes = [...document.querySelectorAll('.event input')];
+    const counter = document.querySelector('#counter');
+    const progress = document.querySelector('#progress');
+    const storageKey = 'dalat-timeline-2026-checklist';
+    const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const prepBoxes = [...document.querySelectorAll('.prep-item input')];
+    const placeBoxes = [...document.querySelectorAll('.place-item input')];
+    const prepCounter = document.querySelector('#prep-counter');
+    const prepStorageKey = 'dalat-preparation-checklist';
+    const placeStorageKey = 'dalat-place-checklist';
+    const savedPrep = JSON.parse(localStorage.getItem(prepStorageKey) || '[]');
+    const savedPlaces = JSON.parse(localStorage.getItem(placeStorageKey) || '[]');
+    const times = [
+      '06:00–07:00', '08:00–10:00', '10:00–11:00', '11:00–12:00', '13:00–15:00', '15:00–16:00', '18:00–20:00', '20:00–22:00', '22:00–23:00',
+      '06:30–07:00', '07:00–08:00', '08:00–11:00', '11:00–12:00', '12:00–13:00', '13:30–15:00', '15:00–17:00', '17:00–17:30', '18:00–19:30', '19:30–21:00',
+      '05:00–05:30', '05:30–07:30', '08:30–09:30', '09:30–10:30', '10:30–12:00', '12:00–12:30', '12:30–13:30', '14:00–16:00', '16:00–16:30', '16:30–18:00', '18:30–19:30', '19:30–20:30', '20:30–22:30',
+      '07:30–09:00', '09:00–10:30', '11:00–12:00', '12:00–13:00', '13:00–15:00'
+    ];
+
+    boxes.forEach((box, index) => {
+      box.checked = Boolean(saved[index]);
+      const time = document.createElement('span');
+      time.className = 'event-time';
+      time.textContent = times[index] || 'Linh hoạt';
+      box.closest('.event').prepend(time);
+      box.addEventListener('change', update);
+    });
+
+    prepBoxes.forEach((box, index) => {
+      box.checked = Boolean(savedPrep[index]);
+      box.addEventListener('change', updateExtras);
+    });
+    placeBoxes.forEach((box, index) => {
+      box.checked = Boolean(savedPlaces[index]);
+      box.addEventListener('change', updateExtras);
+    });
+
+    function update() {
+      const values = boxes.map(box => box.checked);
+      localStorage.setItem(storageKey, JSON.stringify(values));
+      boxes.forEach(box => box.closest('.event').classList.toggle('done', box.checked));
+      const completed = values.filter(Boolean).length;
+      counter.textContent = `${completed}/${boxes.length}`;
+      progress.style.width = `${(completed / boxes.length) * 100}%`;
+    }
+
+    function updateExtras() {
+      const prepValues = prepBoxes.map(box => box.checked);
+      const placeValues = placeBoxes.map(box => box.checked);
+      localStorage.setItem(prepStorageKey, JSON.stringify(prepValues));
+      localStorage.setItem(placeStorageKey, JSON.stringify(placeValues));
+      prepBoxes.forEach(box => box.closest('.prep-item').classList.toggle('done', box.checked));
+      placeBoxes.forEach(box => box.closest('.place-item').classList.toggle('done', box.checked));
+      prepCounter.textContent = `${prepValues.filter(Boolean).length}/${prepBoxes.length} mục đã hoàn thành`;
+    }
+
+    document.querySelector('#reset').addEventListener('click', () => {
+      boxes.forEach(box => { box.checked = false; });
+      update();
+    });
+
+    update();
+    updateExtras();
+  </script>
+</body>
+</html>
