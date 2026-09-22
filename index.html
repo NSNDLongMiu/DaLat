@@ -521,11 +521,14 @@
     // Dán URL Web App (kết thúc bằng /exec) sau khi deploy Apps Script vào đây.
     const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz_OjUR-TrvgyljrwMQgoYQ3MXaxUlXV5gzXkcn0y_pSPwGXJ2N0jxVqrWkne0PI7NclQ/exec';
 
+    // Ném lỗi ra ngoài nếu thất bại (không tự trả về mảng rỗng), để nơi gọi tự quyết định
+    // giữ nguyên dữ liệu cũ thay vì xoá trắng danh sách đang hiển thị.
     function gasGet(kind) {
       if (!GAS_ENDPOINT) return Promise.resolve([]);
-      return fetch(`${GAS_ENDPOINT}?kind=${kind}&t=${Date.now()}`)
-        .then(res => res.json())
-        .catch(err => { console.warn(`gas get(${kind}) error:`, err); return []; });
+      return fetch(`${GAS_ENDPOINT}?kind=${kind}&t=${Date.now()}`).then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      });
     }
 
     function gasPost(payload) {
@@ -569,7 +572,14 @@
       }
 
       async function loadRemoteComments() {
-        comments = await gasGet('feedback');
+        let fresh;
+        try {
+          fresh = await gasGet('feedback');
+        } catch (err) {
+          console.warn('feedback load error:', err);
+          return; // giữ nguyên danh sách đang hiển thị, không xoá trắng
+        }
+        comments = fresh;
         renderComments();
       }
 
@@ -585,6 +595,7 @@
       });
 
       loadRemoteComments();
+      setInterval(loadRemoteComments, 15000);
     })();
 
     (function initGateLogger() {
