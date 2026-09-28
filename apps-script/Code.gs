@@ -40,7 +40,7 @@ function doPost(e) {
       photoId = data.photo ? savePhotoToDrive(data.photo) : '';
       mealSheet.appendRow([
         data.time || '', "'" + (data.date || ''), data.meal || '', data.food || '',
-        data.portion || '', data.taste || '', data.veggie ? 'yes' : 'no', data.note || '', photoId,
+        data.portion || '', data.taste || '', data.veggie || '', data.note || '', photoId,
       ]);
       notifyIfMealIsRough(data);
     } else if (data.kind === 'meal-update') {
@@ -60,10 +60,27 @@ function doPost(e) {
       }
       // Có ảnh mới thì upload thay ảnh cũ; không thì giữ nguyên ảnh cũ (photoId truyền lên từ client).
       photoId = data.photo ? savePhotoToDrive(data.photo) : (data.photoId || '');
-      mealSheet2.getRange(foundRow + 1, 2, 1, 8).setValues([[
-        "'" + (data.date || ''), data.meal || '', data.food || '',
-        data.portion || '', data.taste || '', data.veggie ? 'yes' : 'no', data.note || '', photoId,
+      // Ghi lại cả cột Time — cho phép chỉnh giờ ăn khi sửa; nếu client không gửi thì giữ giờ gốc.
+      mealSheet2.getRange(foundRow + 1, 1, 1, 9).setValues([[
+        data.time || allRows[foundRow][0], "'" + (data.date || ''), data.meal || '', data.food || '',
+        data.portion || '', data.taste || '', data.veggie || '', data.note || '', photoId,
       ]]);
+    } else if (data.kind === 'meal-delete') {
+      // Chỉ cho xoá bữa của đúng ngày hôm nay — chặn xoá bữa của ngày khác kể cả khi
+      // ai đó cố gọi thẳng API (phòng trường hợp bỏ qua giới hạn ở giao diện).
+      var mealSheet3 = getOrCreateSheet(ss, 'Meals', MEAL_HEADERS);
+      var allRows3 = mealSheet3.getDataRange().getValues();
+      var foundRow3 = -1;
+      for (var j = 1; j < allRows3.length; j++) {
+        if (allRows3[j][0] === data.id) { foundRow3 = j; break; }
+      }
+      if (foundRow3 === -1) {
+        return jsonOutput({ ok: false, error: 'không tìm thấy bữa để xoá' });
+      }
+      if (allRows3[foundRow3][1] !== todayStrGS()) {
+        return jsonOutput({ ok: false, error: 'chỉ được xoá bữa của hôm nay' });
+      }
+      mealSheet3.deleteRow(foundRow3 + 1);
     } else {
       return jsonOutput({ ok: false, error: 'unknown kind' });
     }
@@ -115,7 +132,11 @@ function doGet(e) {
   }
   if (kind === 'meal') {
     var meals = readSheet(ss, 'Meals', ['time', 'date', 'meal', 'food', 'portion', 'taste', 'veggie', 'note', 'photo']);
-    meals.forEach(function (m) { m.veggie = m.veggie === 'yes'; });
+    // Tương thích dữ liệu cũ lưu dạng yes/no trước khi có 3 mức rau củ.
+    meals.forEach(function (m) {
+      if (m.veggie === 'yes') m.veggie = 'Có rau';
+      else if (m.veggie === 'no' || !m.veggie) m.veggie = 'Không rau';
+    });
     return jsonOutput(meals);
   }
   // Endpoint tạm để debug: xem đúng định dạng ô + kiểu giá trị thật trong tab Meals.
@@ -141,6 +162,47 @@ function doGet(e) {
       return jsonOutput({ ok: true, deleted: true });
     }
     return jsonOutput({ ok: true, deleted: false, note: 'không có tab Meals để xoá' });
+  }
+  // Cài đặt (hoặc cài lại) 8 trigger nhắc nhở/báo cáo hằng ngày qua Telegram.
+  // Cần quyền script.scriptapp — nếu chưa được cấp, gọi sẽ báo lỗi rõ ràng.
+  if (kind === 'install-triggers') {
+    try {
+      installDailyTriggers();
+      return jsonOutput({ ok: true });
+    } catch (err) {
+      return jsonOutput({ ok: false, error: String(err) });
+    }
+  }
+  // Gọi thử ngay 1 job nhắc nhở/báo cáo mà không cần chờ đúng giờ trigger — để kiểm tra
+  // Telegram có nhận được tin không. Chỉ cho phép gọi đúng tên hàm nằm trong whitelist.
+  if (kind === 'run-job') {
+    var jobName = e.parameter.name || '';
+    var allowedJobs = {
+      remindPrepareBreakfast: remindPrepareBreakfast,
+      remindUpdateBreakfast: remindUpdateBreakfast,
+      remindPrepareLunch: remindPrepareLunch,
+      remindUpdateLunch: remindUpdateLunch,
+      alertAfternoonFoodIfNeeded: alertAfternoonFoodIfNeeded,
+      remindPrepareDinner: remindPrepareDinner,
+      remindUpdateDinner: remindUpdateDinner,
+      sendDailyReport: sendDailyReport,
+    };
+    if (!allowedJobs[jobName]) {
+      return jsonOutput({ ok: false, error: 'job không hợp lệ', allowed: Object.keys(allowedJobs) });
+    }
+    try {
+      allowedJobs[jobName]();
+      return jsonOutput({ ok: true, ran: jobName });
+    } catch (err) {
+      return jsonOutput({ ok: false, error: String(err) });
+    }
+  }
+  // Liệt kê các trigger hằng ngày đang có (để kiểm tra đã cài đặt thành công chưa).
+  if (kind === 'list-triggers') {
+    var triggers = ScriptApp.getProjectTriggers().map(function (t) {
+      return { handler: t.getHandlerFunction(), type: String(t.getEventType()) };
+    });
+    return jsonOutput({ ok: true, triggers: triggers });
   }
   return jsonOutput({ ok: false, error: 'missing ?kind=gate-log|feedback|meal' });
 }
@@ -197,6 +259,10 @@ var MEAL_IDEA_POOL_GS = [
   'Cơm gà xé', 'Bún bò', 'Phở gà', 'Bánh cuốn', 'Mì trộn', 'Cơm sườn',
   'Bún riêu', 'Bánh mì trứng ốp la', 'Cháo sườn', 'Xôi mặn', 'Cơm tấm', 'Bánh canh',
 ];
+var FRUIT_DESSERT_POOL_GS = [
+  'Cam', 'Xoài', 'Dưa hấu', 'Chuối', 'Nho', 'Thanh long', 'Táo', 'Chè trôi nước',
+  'Bánh flan', 'Sữa chua', 'Rau câu', 'Chè đậu xanh',
+];
 
 function pickRandomGS(pool, count) {
   var copy = pool.slice();
@@ -235,45 +301,136 @@ function notifyIfMealIsRough(data) {
   if (data.food) lines.push('Món: ' + data.food);
   lines.push('');
   lines.push('🍪 Gợi ý ăn bù nhẹ: ' + pickRandomGS(SNACK_POOL_GS, 3).join(', '));
-  if (!data.veggie) {
+  if (data.veggie === 'Không rau' || !data.veggie) {
     lines.push('🥗 Đừng quên rau: ' + pickRandomGS(VEGGIE_POOL_GS, 2).join(', '));
   }
   sendTelegram(lines.join('\n'));
 }
 
-// Chạy bằng trigger giờ cố định — nhắc nếu đến giờ mà chưa ghi bữa đó hôm nay.
-function reminderIfMealMissing(mealName) {
+// ============ 8 JOB TỰ ĐỘNG NHẮC ĂN UỐNG QUA TELEGRAM ============
+// Lịch chạy: xem installDailyTriggers() ở cuối file.
+
+function getTodayMeals() {
   var ss = getDataSpreadsheet();
-  var meals = readSheet(ss, 'Meals', ['time', 'date', 'meal', 'food', 'portion', 'taste', 'veggie', 'note']);
+  var meals = readSheet(ss, 'Meals', ['time', 'date', 'meal', 'food', 'portion', 'taste', 'veggie', 'note', 'photo']);
   var today = todayStrGS();
-  var logged = meals.some(function (m) { return m.date === today && m.meal === mealName; });
-  if (logged) return;
-  sendTelegram('⏰ Chưa thấy ghi bữa <b>' + mealName + '</b> hôm nay — ăn gì đó nhé, đừng để đói bụng!');
+  return meals.filter(function (m) { return m.date === today; });
 }
 
-function reminderBreakfast() { reminderIfMealMissing('Sáng'); }
-function reminderLunch() { reminderIfMealMissing('Trưa'); }
-function reminderDinner() { reminderIfMealMissing('Tối'); }
+function mealIsBad(m) {
+  return m.portion === 'Bỏ bữa' || m.portion === 'Ăn ít' || m.taste === 'Không ngon';
+}
 
-// Chạy mỗi sáng — gợi ý món ăn cho cả ngày, không phụ thuộc dữ liệu đã ghi.
-function morningMealSuggestion() {
+// 1. 7h30 — nhắc chuẩn bị bữa sáng, kèm gợi ý random món ăn.
+function remindPrepareBreakfast() {
   var picks = pickRandomGS(MEAL_IDEA_POOL_GS, 3);
-  sendTelegram('☀️ Gợi ý hôm nay ăn gì:\n' + picks.map(function (p) { return '• ' + p; }).join('\n'));
+  sendTelegram('🌅 7h30 rồi, chuẩn bị bữa sáng thôi!\nGợi ý: ' + picks.join(', '));
+}
+
+// 2. 8h30 — nhắc cập nhật bữa sáng nếu chưa ghi vào app.
+function remindUpdateBreakfast() {
+  var logged = getTodayMeals().some(function (m) { return m.meal === 'Sáng'; });
+  if (logged) return;
+  sendTelegram('⏰ Chưa thấy cập nhật bữa Sáng hôm nay — ăn xong nhớ ghi vào app nhé!');
+}
+
+// 3. 10h30 — nhắc chuẩn bị bữa trưa, kèm gợi ý random món ăn.
+function remindPrepareLunch() {
+  var picks = pickRandomGS(MEAL_IDEA_POOL_GS, 3);
+  sendTelegram('☀️ 10h30 rồi, chuẩn bị bữa trưa thôi!\nGợi ý: ' + picks.join(', '));
+}
+
+// 4. 12h30 — nhắc cập nhật bữa trưa nếu chưa ghi vào app.
+function remindUpdateLunch() {
+  var logged = getTodayMeals().some(function (m) { return m.meal === 'Trưa'; });
+  if (logged) return;
+  sendTelegram('⏰ Chưa thấy cập nhật bữa Trưa hôm nay — ăn xong nhớ ghi vào app nhé!');
+}
+
+// 5. ~13h00 — cảnh báo cần đặt thêm đồ ăn chiều nếu sáng/trưa bỏ bữa hoặc ăn không ngon
+//    (kể cả trường hợp chưa ghi bữa nào, coi như chưa ăn để không bỏ sót).
+function alertAfternoonFoodIfNeeded() {
+  var meals = getTodayMeals();
+  var breakfast = meals.filter(function (m) { return m.meal === 'Sáng'; });
+  var lunch = meals.filter(function (m) { return m.meal === 'Trưa'; });
+  var breakfastBad = !breakfast.length || breakfast.some(mealIsBad);
+  var lunchBad = !lunch.length || lunch.some(mealIsBad);
+  if (!breakfastBad && !lunchBad) return;
+
+  var reasons = [];
+  if (breakfastBad) reasons.push('bữa sáng ' + (breakfast.length ? 'ăn không ngon/ăn ít' : 'chưa ghi hoặc bỏ bữa'));
+  if (lunchBad) reasons.push('bữa trưa ' + (lunch.length ? 'ăn không ngon/ăn ít' : 'chưa ghi hoặc bỏ bữa'));
+  sendTelegram('⚠️ Long ơi, cần đặt thêm đồ ăn chiều nay vì ' + reasons.join(' và ') + '. Đừng để đói bụng nhé!');
+}
+
+// 6. 17h30 — nhắc chuẩn bị bữa tối, gợi ý món chính + tráng miệng/hoa quả.
+function remindPrepareDinner() {
+  var mains = pickRandomGS(MEAL_IDEA_POOL_GS, 2);
+  var desserts = pickRandomGS(FRUIT_DESSERT_POOL_GS, 2);
+  sendTelegram('🌙 17h30 rồi, chuẩn bị bữa tối thôi!\nMón chính gợi ý: ' + mains.join(', ') + '\nTráng miệng/hoa quả: ' + desserts.join(', '));
+}
+
+// 7. 20h00 — nhắc cập nhật bữa tối nếu chưa ghi vào app.
+function remindUpdateDinner() {
+  var logged = getTodayMeals().some(function (m) { return m.meal === 'Tối'; });
+  if (logged) return;
+  sendTelegram('⏰ Chưa thấy cập nhật bữa Tối hôm nay — ăn xong nhớ ghi vào app nhé!');
+}
+
+// 8. 21h00 — báo cáo tổng kết cả ngày ăn uống, kèm góp ý cho ngày mai.
+function sendDailyReport() {
+  var meals = getTodayMeals();
+  var coreMeals = ['Sáng', 'Trưa', 'Tối'];
+  var loggedMeals = {};
+  meals.forEach(function (m) { loggedMeals[m.meal] = true; });
+  var missingCore = coreMeals.filter(function (m) { return !loggedMeals[m]; });
+  var skipped = meals.filter(function (m) { return m.portion === 'Bỏ bữa'; });
+  var rough = meals.filter(function (m) { return m.portion === 'Ăn ít' || m.taste === 'Không ngon'; });
+  var hasVeggie = meals.some(function (m) { return m.veggie === 'Có rau' || m.veggie === 'Nhiều rau'; });
+
+  var lines = ['📋 <b>Báo cáo ăn uống hôm nay (' + todayStrGS() + ')</b>'];
+  lines.push('Đã ghi ' + meals.length + ' bữa.');
+  if (missingCore.length) lines.push('Còn thiếu: ' + missingCore.join(', ') + '.');
+  if (skipped.length) lines.push('Bỏ bữa: ' + skipped.map(function (m) { return m.meal; }).join(', ') + '.');
+  if (rough.length) lines.push('Ăn không ngon/ăn ít: ' + rough.map(function (m) { return m.meal; }).join(', ') + '.');
+  lines.push(hasVeggie ? 'Có ăn rau trong ngày. 👍' : 'Chưa ăn rau hôm nay.');
+
+  var overallGood = !missingCore.length && !skipped.length && !rough.length && hasVeggie;
+  if (overallGood) {
+    lines.push('✅ Hôm nay ăn uống rất ổn định, tiếp tục duy trì nhé!');
+  } else {
+    var tips = [];
+    if (missingCore.length) tips.push('ghi đủ 3 bữa chính');
+    if (skipped.length || rough.length) tips.push('cố gắng không bỏ bữa, ăn ngon miệng hơn');
+    if (!hasVeggie) tips.push('bổ sung thêm rau xanh');
+    lines.push('💡 Ngày mai nên: ' + tips.join(', ') + '.');
+  }
+  sendTelegram(lines.join('\n'));
 }
 
 // Chạy 1 LẦN bằng tay trong Apps Script editor (chọn hàm này > bấm Run) để cài đặt
 // lịch tự động. Chạy lại vẫn an toàn — nó xoá trigger cũ cùng tên trước khi tạo lại.
 function installDailyTriggers() {
-  var handlers = ['morningMealSuggestion', 'reminderBreakfast', 'reminderLunch', 'reminderDinner'];
+  var handlers = [
+    'remindPrepareBreakfast', 'remindUpdateBreakfast',
+    'remindPrepareLunch', 'remindUpdateLunch',
+    'alertAfternoonFoodIfNeeded',
+    'remindPrepareDinner', 'remindUpdateDinner',
+    'sendDailyReport',
+  ];
   var existing = ScriptApp.getProjectTriggers();
   existing.forEach(function (t) {
     if (handlers.indexOf(t.getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(t);
   });
 
-  ScriptApp.newTrigger('morningMealSuggestion').timeBased().atHour(7).everyDays(1).create();
-  ScriptApp.newTrigger('reminderBreakfast').timeBased().atHour(9).everyDays(1).create();
-  ScriptApp.newTrigger('reminderLunch').timeBased().atHour(13).everyDays(1).create();
-  ScriptApp.newTrigger('reminderDinner').timeBased().atHour(19).everyDays(1).create();
+  ScriptApp.newTrigger('remindPrepareBreakfast').timeBased().atHour(7).nearMinute(30).everyDays(1).create();
+  ScriptApp.newTrigger('remindUpdateBreakfast').timeBased().atHour(8).nearMinute(30).everyDays(1).create();
+  ScriptApp.newTrigger('remindPrepareLunch').timeBased().atHour(10).nearMinute(30).everyDays(1).create();
+  ScriptApp.newTrigger('remindUpdateLunch').timeBased().atHour(12).nearMinute(30).everyDays(1).create();
+  ScriptApp.newTrigger('alertAfternoonFoodIfNeeded').timeBased().atHour(13).nearMinute(0).everyDays(1).create();
+  ScriptApp.newTrigger('remindPrepareDinner').timeBased().atHour(17).nearMinute(30).everyDays(1).create();
+  ScriptApp.newTrigger('remindUpdateDinner').timeBased().atHour(20).nearMinute(0).everyDays(1).create();
+  ScriptApp.newTrigger('sendDailyReport').timeBased().atHour(21).nearMinute(0).everyDays(1).create();
 
-  Logger.log('Đã cài xong 4 trigger hằng ngày.');
+  Logger.log('Đã cài xong 8 trigger hằng ngày.');
 }

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nhật ký ăn uống</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
   <style>
     :root {
       --ink: #202b2d;
@@ -119,6 +120,7 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .day-event .dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; }
+    .event-thumb { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 3px; object-fit: cover; }
     .day-event span:last-child { overflow: hidden; text-overflow: ellipsis; }
     .day-more { flex: 0 0 auto; padding: 0 6px; color: var(--muted); font-size: 10.5px; font-weight: 700; }
     .day-empty-hint { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 15px; opacity: 0; transition: opacity .12s ease; }
@@ -156,30 +158,68 @@
     .modal h3 { margin: 0 22px 12px 0; color: #173f40; font-size: 17px; text-transform: capitalize; }
 
     .modal-entries { margin-bottom: 6px; }
-    .meal-entry { position: relative; padding: 8px 30px 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+    .meal-entry { padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px; }
     .meal-entry:first-child { border-top: none; }
-    .meal-entry .meal-tag { display: inline-block; margin-right: 7px; padding: 2px 7px; background: var(--cat, var(--accent-dark)); color: #fff; border-radius: 99px; font: 700 10px Arial, sans-serif; letter-spacing: .03em; text-transform: uppercase; }
-    .meal-entry .meal-food { font-weight: 700; }
-    .meal-entry .meal-meta { margin-top: 2px; color: var(--muted); font-size: 11.5px; }
-    .meal-edit-btn {
-      position: absolute; top: 8px; right: 0; width: 24px; height: 24px; border: none;
+    .meal-entry-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .meal-entry-title { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+    .meal-entry .meal-tag {
+      flex: 0 0 auto; padding: 2px 7px; background: var(--cat, var(--accent-dark)); color: #fff;
+      border-radius: 99px; font: 700 10px Arial, sans-serif; letter-spacing: .03em; text-transform: uppercase;
+    }
+    .meal-entry .meal-food { font-weight: 700; overflow-wrap: anywhere; }
+    .meal-entry-actions { flex: 0 0 auto; display: flex; gap: 5px; }
+    .meal-edit-btn, .meal-delete-btn {
+      width: 26px; height: 26px; border: none;
       background: #f1efe7; border-radius: 50%; font-size: 12px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
     }
     .meal-edit-btn:hover { background: var(--line); }
+    .meal-delete-btn:hover { background: #f5d9d4; }
+    .meal-delete-btn:disabled { opacity: .5; cursor: default; }
+    .meal-entry-body { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-top: 6px; }
+    .meal-meta { flex: 1 1 auto; min-width: 0; color: var(--muted); font-size: 11.5px; line-height: 1.7; }
+    .meal-meta-row { display: block; }
     .meal-entry-photo {
-      display: block; margin-top: 6px; width: 64px; height: 64px; object-fit: cover;
-      border-radius: 8px; border: 1px solid var(--line);
+      flex: 0 0 auto; width: 64px; height: 64px; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--line); display: block; cursor: zoom-in;
     }
     .empty-state { padding: 10px 0; color: var(--muted); font-size: 13px; }
 
     .quick-add { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+
+    .form-error-banner {
+      display: none; margin: 0 0 12px; padding: 9px 12px; border-radius: 9px;
+      background: rgba(192, 57, 43, .1); border: 1px solid rgba(192, 57, 43, .3);
+      color: var(--bad); font-size: 12.5px; font-weight: 700;
+    }
+
+    .form-section { margin-bottom: 16px; padding: 12px 12px 2px; border-radius: 11px; }
+    .form-section.required-section { background: rgba(157, 63, 45, .05); border: 1px solid rgba(157, 63, 45, .15); }
+    .form-section.optional-section { background: rgba(40, 123, 120, .04); border: 1px solid rgba(40, 123, 120, .12); }
+    .section-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+    .section-title { font: 700 12px Arial, sans-serif; letter-spacing: .03em; color: #173f40; text-transform: uppercase; }
+    .section-optional-tag {
+      font-size: 10.5px; color: var(--muted); font-style: italic; text-transform: none; letter-spacing: 0;
+    }
+
     .chip-label {
-      margin: 0 0 6px; color: var(--muted); font: 700 11px Arial, sans-serif;
-      letter-spacing: .04em; text-transform: uppercase; transition: color .15s ease;
+      display: flex; align-items: center; gap: 4px; margin: 0 0 6px; color: var(--muted);
+      font: 700 11px Arial, sans-serif; letter-spacing: .04em; text-transform: uppercase; transition: color .15s ease;
     }
     .chip-label.missing { color: var(--bad); }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .required-mark { color: var(--bad); font-weight: 700; }
+    .field-hint { margin: -4px 0 10px; color: var(--muted); font-size: 11px; }
+    .field-hint.error { color: var(--bad); font-weight: 700; }
+
+    @keyframes shake {
+      10%, 90% { transform: translateX(-1px); }
+      20%, 80% { transform: translateX(2px); }
+      30%, 50%, 70% { transform: translateX(-4px); }
+      40%, 60% { transform: translateX(4px); }
+    }
+    .chip-row.shake { animation: shake .5s; }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
     .chip {
       padding: 8px 12px; border: 1px solid var(--line); border-radius: 99px; background: #fff;
       color: var(--ink); font-size: 12.5px; cursor: pointer; user-select: none;
@@ -188,11 +228,15 @@
     .chip-row[data-group="status"] .chip.active { background: var(--accent-dark); border-color: var(--accent-dark); }
     .chip-row[data-group="meal"] .chip { border-color: var(--cat); color: var(--cat); font-weight: 700; }
     .chip-row[data-group="meal"] .chip.active { background: var(--cat); border-color: var(--cat); color: #fff; }
-    #modal-food {
-      width: 100%; margin-bottom: 10px; padding: 10px 12px; color: var(--ink); background: #fff;
+    .chip-row[data-group="veggie"] .chip.active { background: var(--good); border-color: var(--good); color: #fff; }
+    #chip-veggie { margin-bottom: 10px; }
+    #modal-food, #modal-time {
+      width: 100%; margin-bottom: 4px; padding: 10px 12px; color: var(--ink); background: #fff;
       border: 1px solid var(--line); border-radius: 9px; font: 14px/1.4 "Segoe UI", Arial, sans-serif;
     }
-    #modal-food:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(40, 123, 120, .14); }
+    #modal-time { margin-bottom: 10px; }
+    #modal-food:focus, #modal-time:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(40, 123, 120, .14); }
+    #modal-food.invalid { border-color: var(--bad); }
     .photo-row { margin-bottom: 10px; }
     .photo-btn {
       display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px dashed var(--line);
@@ -239,6 +283,23 @@
     .suggestion-body span { color: var(--muted); font-size: 12.5px; }
     .pill-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
     .pill { padding: 3px 8px; background: #edf4f0; color: #35645f; border-radius: 99px; font-size: 11px; }
+
+    /* Lightbox xem ảnh phóng to */
+    .lightbox-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200; background: rgba(20, 24, 23, .88);
+      align-items: center; justify-content: center; padding: 24px; cursor: zoom-out;
+    }
+    .lightbox-overlay.open { display: flex; }
+    .lightbox-overlay img { max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+
+    /* Tinh chỉnh flatpickr (chọn giờ) cho hợp tông màu trang */
+    .flatpickr-time { height: auto !important; }
+    .flatpickr-time input { color: #173f40 !important; font-weight: 700; }
+    .flatpickr-time .flatpickr-am-pm { color: var(--accent-dark) !important; font-weight: 700; }
+    .numInputWrapper span.arrowUp:after { border-bottom-color: var(--teal) !important; }
+    .numInputWrapper span.arrowDown:after { border-top-color: var(--teal) !important; }
+    .flatpickr-time .numInputWrapper:hover, .flatpickr-time .flatpickr-am-pm:hover { background: rgba(40,123,120,.08); }
+    .flatpickr-calendar { box-shadow: 0 8px 28px rgba(23,39,37,.2); border-radius: 10px; }
   </style>
 </head>
 <body>
@@ -248,6 +309,7 @@
       <div class="brand"><span class="brand-icon">🍲</span><span>Nhật ký ăn uống</span></div>
       <span class="month-label" id="cal-month-label"></span>
       <div class="topbar-controls">
+        <a class="today-btn" href="gacha-mon-an.html" style="text-decoration:none">🎰 Quay món ăn</a>
         <button type="button" class="today-btn" id="cal-today-btn">Hôm nay</button>
         <div class="nav-btns">
           <button type="button" id="cal-prev" aria-label="Tháng trước">‹</button>
@@ -278,33 +340,61 @@
       <p class="empty-state" id="past-note" style="display:none">🔒 Ngày đã qua, chỉ xem lại nhật ký thôi nhé.</p>
 
       <div class="quick-add" id="quick-add">
-        <p class="chip-label" id="chip-meal-label">Bữa</p>
-        <div class="chip-row" data-group="meal" id="chip-meal">
-          <span class="chip" data-value="Sáng" style="--cat:#3E7CC2">🌅 Sáng</span>
-          <span class="chip" data-value="Trưa" style="--cat:#D9A61E">☀️ Trưa</span>
-          <span class="chip" data-value="Xế" style="--cat:#D9772E">🍪 Xế</span>
-          <span class="chip" data-value="Tối" style="--cat:#7C5FB5">🌙 Tối</span>
-          <span class="chip" data-value="Khuya" style="--cat:#2E4A63">🌌 Khuya</span>
-          <span class="chip" data-value="Ăn vặt" style="--cat:#C24E80">🍬 Ăn vặt</span>
-        </div>
-        <p class="chip-label" id="chip-status-label">Tình trạng</p>
-        <div class="chip-row" data-group="status" id="chip-status">
-          <span class="chip" data-value="on">🙂 Ổn</span>
-          <span class="chip" data-value="it">😐 Ăn ít</span>
-          <span class="chip" data-value="dở">😣 Không ngon</span>
-          <span class="chip" data-value="bo">❌ Bỏ bữa</span>
-        </div>
-        <div class="chip-row" id="chip-veggie">
-          <span class="chip" data-value="veggie">🥗 Có rau</span>
-        </div>
-        <input type="text" id="modal-food" placeholder="Món ăn (không bắt buộc)">
+        <p class="form-error-banner" id="form-error-banner"></p>
 
-        <div class="photo-row" id="photo-row">
-          <label class="photo-btn" for="modal-photo-input" id="photo-add-label">📷 Thêm ảnh món ăn</label>
-          <input type="file" accept="image/*" id="modal-photo-input" style="display:none">
-          <div class="photo-preview" id="photo-preview" style="display:none">
-            <img id="photo-preview-img" alt="Ảnh món ăn">
-            <button type="button" id="photo-remove-btn" title="Bỏ ảnh">×</button>
+        <div class="form-section required-section">
+          <div class="section-head"><span class="section-title">Thông tin bắt buộc</span></div>
+
+          <p class="chip-label">Giờ ăn</p>
+          <input type="time" id="modal-time">
+          <p class="field-hint" id="modal-time-hint">Tự cập nhật theo giờ hiện tại — chỉnh tay thì sẽ giữ nguyên giờ bạn chọn.</p>
+
+          <p class="chip-label" id="chip-meal-label">Bữa <span class="required-mark">*</span></p>
+          <div class="chip-row" data-group="meal" id="chip-meal">
+            <span class="chip" data-value="Sáng" style="--cat:#3E7CC2">🌅 Sáng</span>
+            <span class="chip" data-value="Trưa" style="--cat:#D9A61E">☀️ Trưa</span>
+            <span class="chip" data-value="Xế" style="--cat:#D9772E">🍪 Xế</span>
+            <span class="chip" data-value="Tối" style="--cat:#7C5FB5">🌙 Tối</span>
+            <span class="chip" data-value="Khuya" style="--cat:#2E4A63">🌌 Khuya</span>
+            <span class="chip" data-value="Ăn vặt" style="--cat:#C24E80">🍬 Ăn vặt</span>
+          </div>
+          <p class="field-hint">Chọn đúng 1 bữa</p>
+
+          <p class="chip-label" id="chip-status-label">Tình trạng <span class="required-mark">*</span></p>
+          <div class="chip-row" data-group="status" id="chip-status">
+            <span class="chip" data-value="on">🙂 Ổn</span>
+            <span class="chip" data-value="it">😐 Ăn ít</span>
+            <span class="chip" data-value="dở">😣 Không ngon</span>
+            <span class="chip" data-value="bo">❌ Bỏ bữa</span>
+          </div>
+          <p class="field-hint">Ăn thế nào, ngon miệng hay không</p>
+
+          <p class="chip-label" id="modal-food-label">Món ăn <span class="required-mark">*</span></p>
+          <input type="text" id="modal-food" placeholder="Ví dụ: Cơm gà xối mỡ">
+          <p class="field-hint">Ghi tên món để dễ nhớ lại sau này</p>
+        </div>
+
+        <div class="form-section optional-section">
+          <div class="section-head">
+            <span class="section-title">Thông tin thêm</span>
+            <span class="section-optional-tag">không bắt buộc</span>
+          </div>
+
+          <p class="chip-label">Rau củ</p>
+          <div class="chip-row" data-group="veggie" id="chip-veggie">
+            <span class="chip" data-value="Không rau">🚫 Không rau</span>
+            <span class="chip" data-value="Có rau">🥗 Có rau</span>
+            <span class="chip" data-value="Nhiều rau">🥬 Nhiều rau</span>
+          </div>
+
+          <div class="photo-row" id="photo-row">
+            <label class="photo-btn" for="modal-photo-input" id="photo-add-label">📷 Thêm ảnh món ăn</label>
+            <input type="file" accept="image/*" id="modal-photo-input" style="display:none">
+            <div class="photo-preview" id="photo-preview" style="display:none">
+              <img id="photo-preview-img" alt="Ảnh món ăn">
+              <button type="button" id="photo-remove-btn" title="Bỏ ảnh">×</button>
+            </div>
+            <p class="field-hint error" id="photo-error" style="display:none"></p>
           </div>
         </div>
 
@@ -317,6 +407,11 @@
     </div>
   </div>
 
+  <div class="lightbox-overlay" id="lightbox-overlay">
+    <img id="lightbox-img" src="" alt="Ảnh phóng to">
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
   <script>
     // Dùng chung Apps Script với trang chính (index.html).
     const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyM2ODmrwD-mlM4CalUG4pSzGVwsBq9uw2GT6qJBWIDO7EIXPpxyZJNlP22m90m-lXM/exec';
@@ -407,6 +502,7 @@
       const modalEntries = document.querySelector('#modal-entries');
       const modalSuggestion = document.querySelector('#modal-suggestion');
       const modalFood = document.querySelector('#modal-food');
+      const modalTime = document.querySelector('#modal-time');
       const quickAdd = document.querySelector('#quick-add');
       const pastNote = document.querySelector('#past-note');
       const photoInput = document.querySelector('#modal-photo-input');
@@ -422,22 +518,38 @@
       let selectedDate = null;
       let selectedMeal = null;
       let selectedStatus = null;
-      let veggieOn = false;
+      let selectedVeggie = null;
       let editingEntryId = null;
       let pendingPhotoDataUrl = null;
       let existingPhotoId = null;
+      let timeManuallyTouched = false; // reset về false chỉ khi tải lại cả trang
 
       function entriesForDate(dateStr) {
         return entries.filter(e => e.date === dateStr);
       }
 
+      // Chuẩn hoá giá trị rau củ — hỗ trợ cả dữ liệu cũ dạng yes/no (hoặc true/false do
+      // backend cũ tự chuyển đổi) lẫn nhãn mới dạng chuỗi mô tả.
+      function veggieLabel(v) {
+        if (v === 'Có rau' || v === 'Nhiều rau' || v === 'Không rau') return v;
+        if (v === 'yes' || v === true) return 'Có rau';
+        return 'Không rau';
+      }
+      function hasVeggie(e) {
+        const label = veggieLabel(e.veggie);
+        return label === 'Có rau' || label === 'Nhiều rau';
+      }
+
+      function pad2(n) { return String(n).padStart(2, '0'); }
+      function timeInputValueFromDate(d) { return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+
       function dayStatus(dayEntries) {
         if (!dayEntries.length) return 'none';
         const skipped = dayEntries.filter(e => e.portion === 'Bỏ bữa').length;
         const rough = dayEntries.filter(e => e.portion === 'Ăn ít' || e.taste === 'Không ngon').length;
-        const hasVeggie = dayEntries.some(e => e.veggie);
+        const dayHasVeggie = dayEntries.some(hasVeggie);
         if (skipped > 0 || rough >= 2) return 'bad';
-        if (rough >= 1 || !hasVeggie) return 'warn';
+        if (rough >= 1 || !dayHasVeggie) return 'warn';
         return 'good';
       }
 
@@ -485,7 +597,10 @@
               const hex = CATEGORY_COLORS[e.meal] || '#888888';
               const bad = e.portion === 'Bỏ bữa' || e.portion === 'Ăn ít' || e.taste === 'Không ngon';
               const text = `${CATEGORY_ICONS[e.meal] || ''} ${escapeHtml(e.meal || '')}${e.food ? ' · ' + escapeHtml(e.food) : ''}${bad ? ' ⚠️' : ''}`;
-              return `<div class="day-event" style="background:${hex}22;color:${hex}"><span class="dot" style="background:${hex}"></span><span>${text}</span></div>`;
+              const thumb = e.photo
+                ? `<img class="event-thumb" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.photo)}&sz=w60" alt="">`
+                : `<span class="dot" style="background:${hex}"></span>`;
+              return `<div class="day-event" style="background:${hex}22;color:${hex}">${thumb}<span>${text}</span></div>`;
             }).join('') + (extra > 0 ? `<div class="day-more">+${extra} khác</div>` : '');
 
             cells += `
@@ -525,14 +640,31 @@
           return;
         }
         const canEdit = selectedDate === todayStr();
-        modalEntries.innerHTML = dayEntries.map(e => `
+        modalEntries.innerHTML = dayEntries.map(e => {
+          const timeLabel = e.time ? new Date(e.time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '';
+          return `
           <div class="meal-entry">
-            ${canEdit ? `<button type="button" class="meal-edit-btn" data-time="${escapeHtml(e.time || '')}" title="Sửa bữa này">✏️</button>` : ''}
-            <span class="meal-tag" style="--cat:${CATEGORY_COLORS[e.meal] || ''}">${CATEGORY_ICONS[e.meal] || ''} ${escapeHtml(e.meal || '')}</span>
-            <span class="meal-food">${escapeHtml(e.food || '(không ghi món)')}</span>
-            <div class="meal-meta">${escapeHtml(e.portion || '')}${e.taste ? ` · ${escapeHtml(e.taste)}` : ''} · ${e.veggie ? 'có rau' : 'không rau'}</div>
-            ${e.photo ? `<a href="https://drive.google.com/file/d/${encodeURIComponent(e.photo)}/view" target="_blank" rel="noopener"><img class="meal-entry-photo" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.photo)}&sz=w200" alt="Ảnh món ăn" loading="lazy"></a>` : ''}
-          </div>`).join('');
+            <div class="meal-entry-header">
+              <div class="meal-entry-title">
+                <span class="meal-tag" style="--cat:${CATEGORY_COLORS[e.meal] || ''}">${CATEGORY_ICONS[e.meal] || ''} ${escapeHtml(e.meal || '')}</span>
+                <span class="meal-food">${escapeHtml(e.food || '(không ghi món)')}</span>
+              </div>
+              ${canEdit ? `
+                <div class="meal-entry-actions">
+                  <button type="button" class="meal-edit-btn" data-time="${escapeHtml(e.time || '')}" title="Sửa bữa này">✏️</button>
+                  <button type="button" class="meal-delete-btn" data-time="${escapeHtml(e.time || '')}" title="Xoá bữa này">🗑️</button>
+                </div>` : ''}
+            </div>
+            <div class="meal-entry-body">
+              <div class="meal-meta">
+                ${timeLabel ? `<span class="meal-meta-row">🕐 ${timeLabel}</span>` : ''}
+                <span class="meal-meta-row">${escapeHtml(e.portion || '')}${e.taste ? ` · ${escapeHtml(e.taste)}` : ''}</span>
+                <span class="meal-meta-row">${escapeHtml(veggieLabel(e.veggie))}</span>
+              </div>
+              ${e.photo ? `<img class="meal-entry-photo" src="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.photo)}&sz=w200" data-full="https://drive.google.com/thumbnail?id=${encodeURIComponent(e.photo)}&sz=w1200" alt="Ảnh món ăn — bấm để phóng to" loading="lazy">` : ''}
+            </div>
+          </div>`;
+        }).join('');
         if (canEdit) {
           modalEntries.querySelectorAll('.meal-edit-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -540,7 +672,31 @@
               if (entry) enterEditMode(entry);
             });
           });
+          modalEntries.querySelectorAll('.meal-delete-btn').forEach(btn => {
+            btn.addEventListener('click', () => deleteEntry(btn.dataset.time, btn));
+          });
         }
+      }
+
+      async function deleteEntry(time, btn) {
+        const entry = entries.find(e => e.time === time);
+        if (!entry) return;
+        const label = `${entry.meal}${entry.food ? ' · ' + entry.food : ''}`;
+        if (!confirm(`Xoá bữa "${label}"? Không thể hoàn tác.`)) return;
+
+        btn.disabled = true;
+        const result = await gasPost({ kind: 'meal-delete', id: time });
+        if (!result || result.ok === false) {
+          btn.disabled = false;
+          alert('⚠️ Không xoá được — thử lại nhé.');
+          return;
+        }
+
+        entries = entries.filter(e => e.time !== time);
+        if (editingEntryId === time) resetChips();
+        renderCalendar();
+        renderModalEntries();
+        renderModalSuggestion();
       }
 
       const CORE_MEALS = ['Sáng', 'Trưa', 'Tối'];
@@ -551,7 +707,7 @@
         const missingCore = CORE_MEALS.filter(m => !loggedMeals.has(m));
         const skipped = dayEntries.filter(e => e.portion === 'Bỏ bữa');
         const rough = dayEntries.filter(e => e.portion === 'Ăn ít' || e.taste === 'Không ngon');
-        const hasVeggie = dayEntries.some(e => e.veggie);
+        const dayHasVeggie = dayEntries.some(hasVeggie);
         const parts = [];
 
         if (!dayEntries.length) {
@@ -565,8 +721,8 @@
         }
         if (skipped.length) parts.push(`Đã bỏ bữa ${skipped.map(e => e.meal).join(', ')}.`);
         if (rough.length) parts.push(`Có ${rough.length} bữa ăn ít hoặc không ngon miệng.`);
-        if (!hasVeggie) parts.push('Chưa thấy rau trong ngày.');
-        if (!missingCore.length && !skipped.length && !rough.length && hasVeggie) {
+        if (!dayHasVeggie) parts.push('Chưa thấy rau trong ngày.');
+        if (!missingCore.length && !skipped.length && !rough.length && dayHasVeggie) {
           parts.push('Ăn uống ổn định, tiếp tục duy trì vậy nhé!');
         }
         return parts.join(' ');
@@ -581,11 +737,11 @@
         if (dayEntries.length) {
           const skipped = dayEntries.filter(e => e.portion === 'Bỏ bữa');
           const rough = dayEntries.filter(e => e.portion === 'Ăn ít' || e.taste === 'Không ngon');
-          const hasVeggie = dayEntries.some(e => e.veggie);
+          const dayHasVeggie = dayEntries.some(hasVeggie);
           if (skipped.length || rough.length) {
             items.push({ icon: '🍪', body: 'Gợi ý ăn bù / bữa phụ nhẹ:', pills: pickRandom(SNACK_POOL, 3) });
           }
-          if (!hasVeggie) {
+          if (!dayHasVeggie) {
             items.push({ icon: '🥗', body: 'Gợi ý bổ sung rau:', pills: pickRandom(VEGGIE_POOL, 3) });
           }
         }
@@ -619,6 +775,7 @@
         photoPreviewImg.src = '';
         photoPreview.style.display = 'none';
         photoAddLabel.style.display = 'inline-flex';
+        document.querySelector('#photo-error').style.display = 'none';
       }
 
       // Thu nhỏ ảnh (tối đa 1024px cạnh dài, nén JPEG) trước khi upload,
@@ -646,30 +803,77 @@
         });
       }
 
+      const photoError = document.querySelector('#photo-error');
+      const MAX_PHOTO_BYTES = 20 * 1024 * 1024; // 20MB — ảnh gốc trước khi resize
+
       photoInput.addEventListener('change', async () => {
         const file = photoInput.files && photoInput.files[0];
+        photoInput.value = ''; // cho phép chọn lại đúng file đó lần nữa nếu cần
         if (!file) return;
+        photoError.style.display = 'none';
+
+        if (!file.type.startsWith('image/')) {
+          photoError.textContent = '⚠️ Chỉ chọn được file ảnh (jpg, png, ...).';
+          photoError.style.display = 'block';
+          return;
+        }
+        if (file.size > MAX_PHOTO_BYTES) {
+          photoError.textContent = '⚠️ Ảnh quá lớn (tối đa 20MB), chọn ảnh khác nhé.';
+          photoError.style.display = 'block';
+          return;
+        }
+
         try {
           pendingPhotoDataUrl = await resizeImageToDataUrl(file);
           existingPhotoId = null;
           showPhotoPreview(pendingPhotoDataUrl);
         } catch (err) {
           console.warn('resize photo error:', err);
+          photoError.textContent = '⚠️ Không đọc được ảnh này, thử ảnh khác nhé.';
+          photoError.style.display = 'block';
         }
       });
 
       document.querySelector('#photo-remove-btn').addEventListener('click', clearPhotoState);
 
+      modalFood.addEventListener('input', () => {
+        if (modalFood.value.trim()) {
+          modalFood.classList.remove('invalid');
+          chipFoodLabel.classList.remove('missing');
+        }
+      });
+
+      // Thư viện chọn giờ đẹp hơn input[type=time] mặc định của trình duyệt.
+      const modalTimeFp = flatpickr(modalTime, {
+        enableTime: true, noCalendar: true, dateFormat: 'H:i', time_24hr: true, minuteIncrement: 5,
+        onChange: () => { timeManuallyTouched = true; },
+      });
+      // true = do người dùng tự bấm chọn (đánh dấu đã chỉnh tay); false = app tự set (không đánh dấu).
+      function setModalTimeValue(hhmm) {
+        modalTimeFp.setDate(hhmm, false);
+      }
+
+      setModalTimeValue(timeInputValueFromDate(new Date()));
+      // Mỗi phút cập nhật giờ hiện tại vào ô "Giờ ăn" — trừ khi người dùng đã tự chỉnh
+      // (cờ này chỉ được làm mới khi tải lại cả trang) hoặc đang sửa 1 bữa cũ.
+      setInterval(() => {
+        if (!timeManuallyTouched && !editingEntryId) setModalTimeValue(timeInputValueFromDate(new Date()));
+      }, 60000);
+
       function resetChips() {
         selectedMeal = null;
         selectedStatus = null;
-        veggieOn = false;
+        selectedVeggie = null;
         editingEntryId = null;
         modalFood.value = '';
+        modalFood.classList.remove('invalid');
+        chipFoodLabel.classList.remove('missing');
+        if (!timeManuallyTouched) setModalTimeValue(timeInputValueFromDate(new Date()));
         clearPhotoState();
         overlay.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         overlay.querySelectorAll('.chip-label').forEach(l => l.classList.remove('missing'));
         document.querySelector('#save-error').style.display = 'none';
+        document.querySelector('#form-error-banner').style.display = 'none';
         saveLabel.textContent = 'Lưu bữa này';
         cancelEditBtn.style.display = 'none';
       }
@@ -678,8 +882,10 @@
         editingEntryId = entry.time;
         selectedMeal = entry.meal;
         selectedStatus = statusKeyFromEntry(entry);
-        veggieOn = !!entry.veggie;
+        selectedVeggie = veggieLabel(entry.veggie);
         modalFood.value = entry.food || '';
+        modalFood.classList.remove('invalid');
+        if (entry.time) setModalTimeValue(timeInputValueFromDate(new Date(entry.time)));
         pendingPhotoDataUrl = null;
         existingPhotoId = entry.photo || null;
         if (existingPhotoId) {
@@ -690,10 +896,12 @@
 
         overlay.querySelector('#chip-meal').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.value === selectedMeal));
         overlay.querySelector('#chip-status').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.value === selectedStatus));
-        overlay.querySelector('#chip-veggie').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', veggieOn));
+        overlay.querySelector('#chip-veggie').querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.value === selectedVeggie));
         chipMealLabel.classList.remove('missing');
         chipStatusLabel.classList.remove('missing');
+        chipFoodLabel.classList.remove('missing');
         document.querySelector('#save-error').style.display = 'none';
+        document.querySelector('#form-error-banner').style.display = 'none';
 
         saveLabel.textContent = 'Cập nhật bữa này';
         cancelEditBtn.style.display = 'block';
@@ -726,8 +934,23 @@
       overlay.querySelector('#modal-close').addEventListener('click', closeModal);
       overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
 
+      // Bấm vào ảnh món ăn trong danh sách bữa ăn để xem phóng to (lightbox), khỏi phải mở tab mới.
+      const lightboxOverlay = document.querySelector('#lightbox-overlay');
+      const lightboxImg = document.querySelector('#lightbox-img');
+      modalEntries.addEventListener('click', e => {
+        const img = e.target.closest('.meal-entry-photo');
+        if (!img) return;
+        lightboxImg.src = img.dataset.full || img.src;
+        lightboxOverlay.classList.add('open');
+      });
+      lightboxOverlay.addEventListener('click', () => {
+        lightboxOverlay.classList.remove('open');
+        lightboxImg.src = '';
+      });
+
       const chipMealLabel = document.querySelector('#chip-meal-label');
       const chipStatusLabel = document.querySelector('#chip-status-label');
+      const chipFoodLabel = document.querySelector('#modal-food-label');
 
       overlay.querySelector('#chip-meal').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
@@ -736,6 +959,7 @@
         chip.classList.add('active');
         selectedMeal = chip.dataset.value;
         chipMealLabel.classList.remove('missing');
+        if (selectedMeal && selectedStatus) document.querySelector('#form-error-banner').style.display = 'none';
       });
       overlay.querySelector('#chip-status').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
@@ -744,12 +968,14 @@
         chip.classList.add('active');
         selectedStatus = chip.dataset.value;
         chipStatusLabel.classList.remove('missing');
+        if (selectedMeal && selectedStatus) document.querySelector('#form-error-banner').style.display = 'none';
       });
       overlay.querySelector('#chip-veggie').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
-        veggieOn = !veggieOn;
-        chip.classList.toggle('active', veggieOn);
+        overlay.querySelector('#chip-veggie').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        selectedVeggie = chip.dataset.value;
       });
 
       const saveError = document.querySelector('#save-error');
@@ -767,20 +993,53 @@
         resetChips();
       });
 
+      const formErrorBanner = document.querySelector('#form-error-banner');
+      const chipMealRow = document.querySelector('#chip-meal');
+      const chipStatusRow = document.querySelector('#chip-status');
+
+      function flashInvalid(row) {
+        row.classList.remove('shake');
+        void row.offsetWidth; // ép reflow để animation chạy lại được từ đầu
+        row.classList.add('shake');
+      }
+
+      function buildEntryTime() {
+        const [hh, mm] = modalTime.value.split(':').map(Number);
+        const d = new Date(selectedDate + 'T00:00:00');
+        if (!Number.isNaN(hh) && !Number.isNaN(mm)) d.setHours(hh, mm, 0, 0);
+        return d.toISOString();
+      }
+
       saveBtn.addEventListener('click', async () => {
+        const food = modalFood.value.trim();
         chipMealLabel.classList.toggle('missing', !selectedMeal);
         chipStatusLabel.classList.toggle('missing', !selectedStatus);
-        if (!selectedMeal || !selectedStatus) return;
+        chipFoodLabel.classList.toggle('missing', !food);
+        modalFood.classList.toggle('invalid', !food);
+        if (!selectedMeal || !selectedStatus || !food) {
+          const missing = [];
+          if (!selectedMeal) { missing.push('Bữa'); flashInvalid(chipMealRow); }
+          if (!selectedStatus) { missing.push('Tình trạng'); flashInvalid(chipStatusRow); }
+          if (!food) missing.push('Món ăn');
+          formErrorBanner.textContent = `⚠️ Vui lòng nhập ${missing.join(', ')} trước khi lưu.`;
+          formErrorBanner.style.display = 'block';
+          (selectedMeal ? (selectedStatus ? modalFood : chipStatusRow) : chipMealRow).scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return;
+        }
+        formErrorBanner.style.display = 'none';
         const mapped = STATUS_MAP[selectedStatus];
         const isEditing = !!editingEntryId;
+        // Chỉ tự dựng lại giờ từ ô "Giờ ăn" khi người dùng có chỉnh tay hoặc đang tạo mới;
+        // nếu đang sửa mà chưa đụng vào giờ thì giữ nguyên giờ gốc của bữa đó.
+        const entryTime = (isEditing && !timeManuallyTouched) ? editingEntryId : buildEntryTime();
         const entry = {
-          time: isEditing ? editingEntryId : new Date().toISOString(),
+          time: entryTime,
           date: selectedDate,
           meal: selectedMeal,
-          food: modalFood.value.trim(),
+          food: food,
           portion: mapped.portion,
           taste: mapped.taste,
-          veggie: veggieOn,
+          veggie: selectedVeggie || 'Không rau',
           note: '',
         };
         const photoPayload = pendingPhotoDataUrl
