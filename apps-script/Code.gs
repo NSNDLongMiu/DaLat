@@ -13,6 +13,12 @@ function doPost(e) {
     } else if (data.kind === 'feedback') {
       var fbSheet = getOrCreateSheet(ss, 'Feedback', ['Time', 'Name', 'Text']);
       fbSheet.appendRow([data.time || '', data.name || '', data.text || '']);
+    } else if (data.kind === 'meal') {
+      var mealSheet = getOrCreateSheet(ss, 'Meals', ['Time', 'Date', 'Meal', 'Food', 'Portion', 'Taste', 'Veggie', 'Note']);
+      mealSheet.appendRow([
+        data.time || '', data.date || '', data.meal || '', data.food || '',
+        data.portion || '', data.taste || '', data.veggie ? 'yes' : 'no', data.note || '',
+      ]);
     } else {
       return jsonOutput({ ok: false, error: 'unknown kind' });
     }
@@ -33,7 +39,12 @@ function doGet(e) {
   if (kind === 'feedback') {
     return jsonOutput(readSheet(ss, 'Feedback', ['time', 'name', 'text']));
   }
-  return jsonOutput({ ok: false, error: 'missing ?kind=gate-log|feedback' });
+  if (kind === 'meal') {
+    var meals = readSheet(ss, 'Meals', ['time', 'date', 'meal', 'food', 'portion', 'taste', 'veggie', 'note']);
+    meals.forEach(function (m) { m.veggie = m.veggie === 'yes'; });
+    return jsonOutput(meals);
+  }
+  return jsonOutput({ ok: false, error: 'missing ?kind=gate-log|feedback|meal' });
 }
 
 function getOrCreateSheet(ss, name, headers) {

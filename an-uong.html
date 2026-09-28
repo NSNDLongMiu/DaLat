@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nhật ký ăn uống</title>
+  <style>
+    :root {
+      --ink: #202b2d;
+      --muted: #6d7c7c;
+      --paper: #f7f5ef;
+      --card: #fffdf8;
+      --line: #d8dfd8;
+      --accent: #d96545;
+      --accent-dark: #9d3f2d;
+      --teal: #287b78;
+      --good: #2f8f5b;
+      --warn: #c98a1f;
+      --bad: #c0392b;
+      --shadow: 0 18px 45px rgba(35, 52, 47, .10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(217, 101, 69, .12), transparent 28rem),
+        linear-gradient(135deg, #f8f5ed 0%, #eef4ee 100%);
+      font-family: "Segoe UI", "Noto Sans", Arial, sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 0 16px 70px; }
+    header { padding: 48px 0 20px; }
+    .back-link { display: inline-block; margin-bottom: 18px; color: var(--muted); font-size: 13px; text-decoration: none; }
+    .back-link:hover { color: var(--accent-dark); }
+    .eyebrow { margin: 0 0 10px; color: var(--accent-dark); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { max-width: 620px; margin: 0; color: #173f40; font-size: clamp(30px, 6vw, 46px); line-height: 1.05; letter-spacing: -.02em; }
+    .intro { max-width: 560px; margin: 16px 0 0; color: var(--muted); font-size: 16px; }
+
+    section.card {
+      margin: 24px 0; padding: 24px; background: rgba(255, 253, 248, .9);
+      border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+    }
+    h2.card-title { margin: 0 0 6px; color: #173f40; font-size: 20px; }
+    p.card-sub { margin: 0 0 18px; color: var(--muted); font-size: 13.5px; }
+
+    .meal-form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .meal-form-grid label { display: flex; flex-direction: column; gap: 5px; font: 700 11px Arial, sans-serif; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .meal-form-grid input, .meal-form-grid select, #meal-note {
+      padding: 10px 12px; color: var(--ink); background: #fff; border: 1px solid var(--line);
+      border-radius: 9px; font: 14px/1.4 "Segoe UI", Arial, sans-serif; text-transform: none; letter-spacing: normal;
+    }
+    .meal-form-grid input:focus, .meal-form-grid select:focus, #meal-note:focus {
+      outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(40, 123, 120, .14);
+    }
+    .meal-checkbox { flex-direction: row !important; align-items: center; gap: 8px !important; }
+    .meal-checkbox input { width: 17px; height: 17px; accent-color: var(--teal); }
+    #meal-note { width: 100%; margin-top: 12px; min-height: 60px; resize: vertical; }
+    #meal-form button {
+      margin-top: 14px; width: 100%; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid var(--accent-dark); color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      font: 700 13px Arial, sans-serif; letter-spacing: .03em; cursor: pointer;
+    }
+    #meal-form button:hover { background: var(--accent-dark); }
+
+    .suggestion-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-icon { flex: 0 0 auto; font-size: 20px; line-height: 1; }
+    .suggestion-body b { display: block; margin-bottom: 3px; color: #173f40; }
+    .suggestion-body span { color: var(--muted); }
+    .pill-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .pill { padding: 4px 9px; background: #edf4f0; color: #35645f; border-radius: 99px; font-size: 12px; }
+
+    .day-group { margin-bottom: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+    .day-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; background: rgba(40, 123, 120, .04); }
+    .day-dot { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+    .day-dot.good { background: var(--good); }
+    .day-dot.warn { background: var(--warn); }
+    .day-dot.bad { background: var(--bad); }
+    .day-date { font-weight: 700; color: #173f40; font-size: 14px; }
+    .day-summary { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+    .day-entries { padding: 4px 16px 14px; display: none; }
+    .day-group.open .day-entries { display: block; }
+    .meal-entry { padding: 10px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+    .meal-entry:first-child { border-top: none; }
+    .meal-entry .meal-tag { display: inline-block; margin-right: 8px; padding: 2px 8px; background: var(--accent-dark); color: #fff; border-radius: 99px; font: 700 10.5px Arial, sans-serif; letter-spacing: .04em; text-transform: uppercase; }
+    .meal-entry .meal-food { font-weight: 700; }
+    .meal-entry .meal-meta { margin-top: 3px; color: var(--muted); font-size: 12.5px; }
+    .empty-state { padding: 24px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 560px) {
+      .meal-form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <a class="back-link" href="index.html">← Về trang kế hoạch Đà Lạt</a>
+      <p class="eyebrow">Chăm nhau mỗi ngày</p>
+      <h1>Nhật ký ăn uống</h1>
+      <p class="intro">Theo dõi từng bữa để biết hôm nay ăn có ngon, có đủ chưa — thiếu gì thì bổ sung ngay, đừng để bụng đói mà vẫn ráng làm việc.</p>
+    </header>
+
+    <section class="card">
+      <h2 class="card-title">Ghi bữa ăn</h2>
+      <p class="card-sub">Ghi càng đều thì gợi ý càng sát.</p>
+      <form id="meal-form">
+        <div class="meal-form-grid">
+          <label>Ngày
+            <input type="date" id="meal-date" required>
+          </label>
+          <label>Bữa
+            <select id="meal-slot">
+              <option>Sáng</option>
+              <option>Trưa</option>
+              <option>Xế</option>
+              <option>Tối</option>
+              <option>Khuya</option>
+              <option>Ăn vặt</option>
+            </select>
+          </label>
+          <label>Món ăn
+            <input type="text" id="meal-food" placeholder="VD: Cơm gà, bánh mì..." required>
+          </label>
+          <label>Mức ăn
+            <select id="meal-portion">
+              <option>Ăn hết</option>
+              <option>Ăn ít</option>
+              <option>Bỏ bữa</option>
+            </select>
+          </label>
+          <label>Vị
+            <select id="meal-taste">
+              <option>Ngon</option>
+              <option>Tạm</option>
+              <option>Không ngon</option>
+            </select>
+          </label>
+          <label class="meal-checkbox">
+            <input type="checkbox" id="meal-veggie">
+            Bữa này có rau
+          </label>
+        </div>
+        <textarea id="meal-note" placeholder="Ghi chú thêm (mệt, bận việc, thèm gì...)"></textarea>
+        <button type="submit">Lưu vào nhật ký</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Gợi ý cho hôm nay</h2>
+      <p class="card-sub">Tự tính từ nhật ký hôm nay, cập nhật ngay sau khi ghi bữa.</p>
+      <div id="suggestion-list"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Lịch sử theo ngày</h2>
+      <p class="card-sub">Bấm vào 1 ngày để xem chi tiết từng bữa. 🟢 ổn định · 🟡 cần chú ý · 🔴 ăn kém.</p>
+      <div id="history-list"></div>
+    </section>
+  </main>
+
+  <script>
+    // Dùng chung Apps Script với trang chính (index.html) — dán đúng URL Web App vào đây.
+    const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz_OjUR-TrvgyljrwMQgoYQ3MXaxUlXV5gzXkcn0y_pSPwGXJ2N0jxVqrWkne0PI7NclQ/exec';
+
+    function gasGet(kind) {
+      if (!GAS_ENDPOINT) return Promise.resolve([]);
+      return fetch(`${GAS_ENDPOINT}?kind=${kind}&t=${Date.now()}`).then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      });
+    }
+
+    function gasPost(payload) {
+      if (!GAS_ENDPOINT) return Promise.resolve();
+      return fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+      }).catch(err => console.warn('gas post error:', err));
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function todayStr() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function pickRandom(pool, count) {
+      const copy = [...pool];
+      const out = [];
+      while (copy.length && out.length < count) {
+        out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+      }
+      return out;
+    }
+
+    const SNACK_POOL = [
+      'Sữa chua + granola', 'Chuối chín', 'Sữa hạt óc chó/hạnh nhân', 'Bánh mì bơ đậu phộng',
+      'Súp gà nhẹ', 'Cháo yến mạch', 'Chè đậu xanh ít ngọt', 'Trái cây theo mùa',
+      'Sinh tố bơ chuối', 'Khoai lang hấp', 'Ngũ cốc + sữa tươi', 'Bánh flan',
+    ];
+    const VEGGIE_POOL = [
+      'Canh rau ngót', 'Rau luộc chấm kho quẹt', 'Salad trộn dầu giấm', 'Nộm đu đủ/su hào',
+      'Rau xào tỏi', 'Sinh tố rau củ', 'Canh bí đỏ', 'Rau cải luộc',
+    ];
+
+    (function initMealTracker() {
+      const form = document.querySelector('#meal-form');
+      const dateInput = document.querySelector('#meal-date');
+      const suggestionList = document.querySelector('#suggestion-list');
+      const historyList = document.querySelector('#history-list');
+      if (!form) return;
+
+      dateInput.value = todayStr();
+      let entries = [];
+
+      function entriesForDate(dateStr) {
+        return entries.filter(e => e.date === dateStr);
+      }
+
+      function dayStatus(dayEntries) {
+        if (!dayEntries.length) return 'none';
+        const skipped = dayEntries.filter(e => e.portion === 'Bỏ bữa').length;
+        const rough = dayEntries.filter(e => e.portion === 'Ăn ít' || e.taste === 'Không ngon').length;
+        const hasVeggie = dayEntries.some(e => e.veggie);
+        if (skipped > 0 || rough >= 2) return 'bad';
+        if (rough >= 1 || !hasVeggie) return 'warn';
+        return 'good';
+      }
+
+      function renderSuggestions() {
+        const today = entriesForDate(todayStr());
+        const items = [];
+
+        if (!today.length) {
+          items.push({
+            icon: '📝',
+            title: 'Chưa có nhật ký hôm nay',
+            body: 'Ghi lại bữa đầu tiên trong ngày để bắt đầu theo dõi nhé.',
+          });
+        } else {
+          const skippedMeals = today.filter(e => e.portion === 'Bỏ bữa');
+          const roughMeals = today.filter(e => e.portion === 'Ăn ít' || e.taste === 'Không ngon');
+          const hasVeggie = today.some(e => e.veggie);
+
+          if (skippedMeals.length) {
+            items.push({
+              icon: '⏰',
+              title: `Đã bỏ bữa ${skippedMeals.map(e => e.meal).join(', ')} hôm nay`,
+              body: 'Ăn bù nhẹ nhàng chứ đừng để bụng đói lâu:',
+              pills: pickRandom(SNACK_POOL, 3),
+            });
+          }
+          if (roughMeals.length) {
+            items.push({
+              icon: '🍪',
+              title: 'Có bữa ăn ít / không ngon miệng',
+              body: 'Thử đổi khẩu vị hoặc thêm bữa phụ nhẹ:',
+              pills: pickRandom(SNACK_POOL, 3),
+            });
+          }
+          if (!hasVeggie) {
+            items.push({
+              icon: '🥗',
+              title: 'Hôm nay chưa thấy rau',
+              body: 'Bổ sung thêm rau xanh cho bữa tới:',
+              pills: pickRandom(VEGGIE_POOL, 3),
+            });
+          }
+          if (!skippedMeals.length && !roughMeals.length && hasVeggie) {
+            items.push({
+              icon: '💚',
+              title: 'Hôm nay ăn uống ổn!',
+              body: 'Ăn đủ, ngon miệng, có rau — cứ duy trì vậy nhé.',
+            });
+          }
+        }
+
+        suggestionList.innerHTML = items.map(item => `
+          <div class="suggestion-item">
+            <div class="suggestion-icon">${item.icon}</div>
+            <div class="suggestion-body">
+              <b>${escapeHtml(item.title)}</b>
+              <span>${escapeHtml(item.body)}</span>
+              ${item.pills ? `<div class="pill-list">${item.pills.map(p => `<span class="pill">${escapeHtml(p)}</span>`).join('')}</div>` : ''}
+            </div>
+          </div>`).join('');
+      }
+
+      function renderHistory() {
+        const byDate = {};
+        entries.forEach(e => {
+          if (!byDate[e.date]) byDate[e.date] = [];
+          byDate[e.date].push(e);
+        });
+        const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+        if (!dates.length) {
+          historyList.innerHTML = '<p class="empty-state">Chưa có nhật ký nào — bắt đầu ghi bữa ăn ở trên nhé.</p>';
+          return;
+        }
+
+        historyList.innerHTML = dates.map(date => {
+          const dayEntries = byDate[date].slice().sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+          const status = dayStatus(dayEntries);
+          const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit' });
+          return `
+            <div class="day-group" data-date="${date}">
+              <div class="day-head">
+                <span class="day-dot ${status}"></span>
+                <span class="day-date">${escapeHtml(dateLabel)}</span>
+                <span class="day-summary">${dayEntries.length} bữa</span>
+              </div>
+              <div class="day-entries">
+                ${dayEntries.map(e => `
+                  <div class="meal-entry">
+                    <span class="meal-tag">${escapeHtml(e.meal || '')}</span>
+                    <span class="meal-food">${escapeHtml(e.food || '')}</span>
+                    <div class="meal-meta">${escapeHtml(e.portion || '')} · ${escapeHtml(e.taste || '')} · ${e.veggie ? 'có rau' : 'không rau'}${e.note ? ` · ${escapeHtml(e.note)}` : ''}</div>
+                  </div>`).join('')}
+              </div>
+            </div>`;
+        }).join('');
+
+        historyList.querySelectorAll('.day-head').forEach(head => {
+          head.addEventListener('click', () => head.closest('.day-group').classList.toggle('open'));
+        });
+        // Ngày mới nhất mở sẵn cho tiện xem.
+        const first = historyList.querySelector('.day-group');
+        if (first) first.classList.add('open');
+      }
+
+      function renderAll() {
+        renderSuggestions();
+        renderHistory();
+      }
+
+      async function loadEntries() {
+        let fresh;
+        try {
+          fresh = await gasGet('meal');
+        } catch (err) {
+          console.warn('meal load error:', err);
+          return; // giữ nguyên dữ liệu cũ, không xoá trắng khi lỗi tạm thời
+        }
+        if (!Array.isArray(fresh)) {
+          console.warn('meal load error: phản hồi không phải mảng (Apps Script có thể chưa cập nhật kind=meal)', fresh);
+          return;
+        }
+        entries = fresh;
+        renderAll();
+      }
+
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const food = document.querySelector('#meal-food').value.trim();
+        if (!food) return;
+        const entry = {
+          time: new Date().toISOString(),
+          date: dateInput.value || todayStr(),
+          meal: document.querySelector('#meal-slot').value,
+          food,
+          portion: document.querySelector('#meal-portion').value,
+          taste: document.querySelector('#meal-taste').value,
+          veggie: document.querySelector('#meal-veggie').checked,
+          note: document.querySelector('#meal-note').value.trim(),
+        };
+        entries.push(entry);
+        renderAll();
+        document.querySelector('#meal-food').value = '';
+        document.querySelector('#meal-note').value = '';
+        document.querySelector('#meal-veggie').checked = false;
+        gasPost({ kind: 'meal', ...entry });
+      });
+
+      loadEntries();
+      setInterval(loadEntries, 15000);
+    })();
+  </script>
+</body>
+</html>
