@@ -235,6 +235,7 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit}
 .gacha-card h2{font-size:17px;font-weight:600;margin:0 0 4px}
 .gacha-cta{margin-top:12px;width:100%;height:48px;border-radius:12px;border:none;background:#1B1F24;color:#F4D27A;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:inset 0 -3px 0 #E0A526}
 .gacha-cta:hover{background:#252a31}
+.gacha-cta:disabled{opacity:.55;cursor:default}
 .gacha-cta svg{width:20px;height:20px}
 .odds{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;font-size:12px}
 .odds span{padding:3px 8px;border-radius:6px;font-weight:600}
@@ -265,6 +266,9 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit}
 .spin-btn:disabled{opacity:.5;cursor:default}
 .win{width:100%;max-width:520px;border-radius:12px;background:#1B1F24;border:1px solid var(--rc);padding:14px 16px;display:flex;gap:14px;align-items:center;animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
 .win svg{width:56px;height:56px;color:var(--rc);flex:none}
+.tile .tile-img{position:relative;width:100%;height:96px;object-fit:cover;border-radius:6px;margin-bottom:auto;display:block;-webkit-user-drag:none}
+.tile:has(.tile-img){padding-top:8px}
+.win .win-img{width:84px;height:84px;object-fit:cover;border-radius:10px;flex:none;border:2px solid var(--rc)}
 .win .rb{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:5px;background:var(--rc);color:#101316}
 .win h3{margin:6px 0 2px;font-size:19px;font-weight:600;color:#fff}
 .win p{margin:0;font-size:13.5px;color:#AEB5BC}
@@ -279,7 +283,7 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit}
 @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
 @keyframes fl{0%{opacity:0}20%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){.win{animation:none}.flash.on{animation:none}}
-@media (max-width:560px){.tile{width:112px;height:148px}.tile svg{width:52px;height:52px}.reel{height:184px}}
+@media (max-width:560px){.tile{width:112px;height:148px}.tile svg{width:52px;height:52px}.tile .tile-img{height:84px}.reel{height:184px}}
 </style>
 </head>
 <body>
@@ -972,12 +976,6 @@ $("pSave").onclick=async()=>{
 $("goalBtn").onclick=openProfile;$("profBtn").onclick=openProfile;
 
 /* ---------- gacha ---------- */
-const RAR=[
-  {id:"c",name:"Phổ thông",color:"#9AA3AD",w:62},
-  {id:"r",name:"Hiếm",color:"#4C8DE0",w:24},
-  {id:"e",name:"Sử thi",color:"#A262E8",w:11},
-  {id:"l",name:"Huyền thoại",color:"#E8B230",w:3}
-];
 const ICONS={
   bowl:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 30h48a24 22 0 01-48 0z"/><path d="M22 52h20"/><path d="M40 8l-8 20M48 10l-12 18"/><path d="M24 22c0-4 4-4 4-8M32 22c0-4 4-4 4-8" opacity=".7"/></svg>',
   plate:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><ellipse cx="32" cy="38" rx="26" ry="12"/><ellipse cx="32" cy="36" rx="16" ry="6"/><path d="M24 30c2-6 14-6 16 0"/><path d="M10 12v14M14 12v14M12 26v8M52 12c-4 4-4 12 0 14v8"/></svg>',
@@ -985,23 +983,34 @@ const ICONS={
   leaf:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 34h48a24 20 0 01-48 0z"/><path d="M20 34c0-10 6-16 14-18-2 8-6 14-14 18zM34 34c2-8 8-12 16-12-2 6-8 10-16 12z"/></svg>',
   pot:'<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 26h44v16a10 10 0 01-10 10H20a10 10 0 01-10-10z"/><path d="M4 30h6M54 30h6M20 26c0-6 24-6 24 0"/><path d="M24 18c0-3 3-3 3-6M36 18c0-3 3-3 3-6"/></svg>'
 };
-const DISHES=[
-  ["Bánh mì trứng",350,"1 ổ","c","bread"],["Xôi đậu xanh",400,"1 gói","c","plate"],["Cơm tấm sườn",650,"1 đĩa","c","plate"],
-  ["Bún riêu cua",480,"1 tô","c","bowl"],["Phở gà",420,"1 tô","c","bowl"],["Cơm gà luộc",550,"1 đĩa","c","plate"],
-  ["Mì xào rau cải",500,"1 đĩa","c","plate"],["Cháo thịt bằm",320,"1 tô","c","bowl"],["Bánh cuốn chả lụa",380,"1 đĩa","c","plate"],
-  ["Hủ tiếu Nam Vang",450,"1 tô","c","bowl"],["Bún thịt nướng",520,"1 tô","c","bowl"],["Khoai lang luộc",230,"2 củ vừa","c","leaf"],
-  ["Sữa chua và trái cây",200,"1 hũ + 1 chén","c","leaf"],["Bắp luộc",180,"1 trái","c","leaf"],["Chè đậu đen",250,"1 ly","c","bowl"],
-  ["Bánh bao nhân thịt",330,"1 cái","c","bread"],["Trứng luộc và bánh mì",300,"2 trứng + nửa ổ","c","bread"],
-  ["Phở bò tái",480,"1 tô","r","bowl"],["Bún chả Hà Nội",600,"1 suất","r","bowl"],["Bánh xèo",550,"2 cái + rau","r","plate"],
-  ["Cá kho tộ và cơm",650,"1 suất","r","pot"],["Gỏi cuốn tôm thịt",300,"4 cuốn","r","leaf"],["Canh chua cá lóc và cơm",580,"1 suất","r","pot"],
-  ["Bò lúc lắc và cơm",700,"1 đĩa","r","plate"],["Mì Quảng",550,"1 tô","r","bowl"],["Súp cua",220,"1 chén","r","bowl"],
-  ["Bún bò Huế",620,"1 tô","e","bowl"],["Lẩu thái",750,"1 phần","e","pot"],["Cao lầu Hội An",520,"1 tô","e","bowl"],
-  ["Bò kho bánh mì",680,"1 suất","e","pot"],["Salad ức gà sốt mè",380,"1 hộp","e","leaf"],["Cá hồi áp chảo và rau",520,"150 g cá","e","plate"],
-  ["Bánh canh cua",650,"1 tô","l","bowl"],["Chả cá Lã Vọng",680,"1 suất","l","pot"],["Cơm niêu cá kho",720,"1 niêu","l","pot"],
-  ["Gà nướng mật ong và xôi",780,"1 suất","l","plate"]
-].map(([n,k,p,r,i])=>({n,k,p,r,i}));
-const rar=id=>RAR.find(x=>x.id===id);
-$("odds").innerHTML=RAR.map(r=>'<span style="background:'+r.color+'22;color:'+r.color+';border:1px solid '+r.color+'66">'+r.name+' '+r.w+'%</span>').join("");
+// Dữ liệu hòm món ăn nằm ở hom-mon-an.json (tên, calo, độ hiếm, ảnh) để dễ thêm/sửa món.
+let RAR=[],DISHES=[];
+const rar=id=>RAR.find(x=>x.id===id)||RAR[0];
+const GACHA_ICON_NAMES=["bowl","plate","bread","leaf","pot"];
+function dishVisual(d,cls){
+  return d.img?'<img class="'+cls+'" src="'+esc(d.img)+'" alt="'+esc(d.n)+'" data-icon="'+d.i+'" draggable="false">':ICONS[d.i];
+}
+// Ảnh lỗi (sai đường dẫn, link chết) thì thay bằng hình vẽ biểu tượng.
+document.addEventListener("error",e=>{const t=e.target;if(t.tagName==="IMG"&&t.dataset.icon)t.outerHTML=ICONS[t.dataset.icon]||ICONS.plate},true);
+async function loadGacha(){
+  try{
+    const r=await fetch("hom-mon-an.json",{cache:"no-cache"});if(!r.ok)throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    RAR=(j.do_hiem||[]).map(x=>({id:String(x.id),name:x.ten,color:x.mau||"#9AA3AD",w:Number(x.ti_le)||0}));
+    DISHES=(j.mon||[]).filter(m=>m&&m.ten&&isFinite(Number(m.kcal))).map(m=>({n:m.ten,k:Math.round(Number(m.kcal)),p:m.khau_phan||"1 phần",
+      r:RAR.some(x=>x.id===m.do_hiem)?m.do_hiem:(RAR[0]&&RAR[0].id),i:GACHA_ICON_NAMES.includes(m.bieu_tuong)?m.bieu_tuong:"plate",img:m.anh||""}));
+    if(!RAR.length||!DISHES.length)throw new Error("thiếu do_hiem hoặc mon");
+    $("odds").innerHTML=RAR.map(r=>'<span style="background:'+r.color+'22;color:'+r.color+';border:1px solid '+r.color+'66">'+esc(r.name)+' '+r.w+'%</span>').join("");
+    // Tải sẵn ảnh để lúc quay không bị nháy.
+    DISHES.forEach(d=>{if(d.img){const im=new Image();im.src=d.img}});
+    $("gOpen").disabled=false;
+  }catch(e){
+    console.warn("hom-mon-an.json:",e);
+    $("odds").innerHTML='<span style="color:var(--danger-ink)">Không tải được hom-mon-an.json ('+esc(e.message)+'). Mở trang qua địa chỉ web thay vì mở file trực tiếp, và kiểm tra file JSON đúng cú pháp.</span>';
+    $("gOpen").disabled=true;
+  }
+}
+$("gOpen").disabled=true;loadGacha();
 
 const gdlg=$("gdlg");let gMeal="chieu",spinning=false,sound=true,actx=null;
 function mealTarget(id){
@@ -1018,10 +1027,10 @@ function pool(){
   return {p,t,lo,hi};
 }
 function roll(p){
-  let x=Math.random()*100,r=RAR[0];for(const q of RAR){if(x<q.w){r=q;break}x-=q.w}
+  const rs=RAR.filter(q=>q.w>0&&p.some(d=>d.r===q.id));const tot=rs.reduce((s,q)=>s+q.w,0);let x=Math.random()*tot,r=rs[0]||RAR[0];for(const q of rs){if(x<q.w){r=q;break}x-=q.w}
   const c=p.filter(d=>d.r===r.id);return c[Math.floor(Math.random()*c.length)];
 }
-function tileHtml(d){const r=rar(d.r);return '<div class="tile" style="--rc:'+r.color+'">'+ICONS[d.i]+'<div class="tn">'+esc(d.n)+'</div><div class="tk">'+fmt(d.k)+' kcal</div></div>'}
+function tileHtml(d){const r=rar(d.r);return '<div class="tile" style="--rc:'+r.color+'">'+dishVisual(d,"tile-img")+'<div class="tn">'+esc(d.n)+'</div><div class="tk">'+fmt(d.k)+' kcal</div></div>'}
 const N=64,WIN=56;let strip=[],win=null;
 function buildStrip(){
   const {p,t}=pool();strip=[];for(let i=0;i<N;i++)strip.push(roll(p));win=strip[WIN];
@@ -1070,7 +1079,7 @@ function done(){
   const m=MEALS.find(x=>x.id===gMeal);const t=mealTarget(gMeal);const diff=win.k-t;
   const fit=Math.abs(diff)<=t*.2?"Vừa khớp với lượng calo còn lại.":diff>0?"Nhiều hơn mục tiêu bữa này khoảng "+fmt(diff)+" kcal, có thể ăn bớt tinh bột.":"Ít hơn mục tiêu bữa này khoảng "+fmt(-diff)+" kcal, có thể ăn thêm trái cây hoặc sữa.";
   const can=todayIso===iso(new Date());
-  $("gFoot").innerHTML='<div class="win" style="--rc:'+r.color+'">'+ICONS[win.i]+'<div><span class="rb">'+r.name+'</span><h3>'+esc(win.n)+'</h3><p>'+esc(win.p)+' · khoảng '+fmt(win.k)+' kcal. '+fit+'</p></div></div><div class="win-actions">'+(can?'<button class="btn go" id="gEat">Ghi vào '+m.name.toLowerCase()+'</button>':'')+'<button class="btn" id="gAgain">Quay lại</button></div>';
+  $("gFoot").innerHTML='<div class="win" style="--rc:'+r.color+'">'+dishVisual(win,"win-img")+'<div><span class="rb">'+r.name+'</span><h3>'+esc(win.n)+'</h3><p>'+esc(win.p)+' · khoảng '+fmt(win.k)+' kcal. '+fit+'</p></div></div><div class="win-actions">'+(can?'<button class="btn go" id="gEat">Ghi vào '+m.name.toLowerCase()+'</button>':'')+'<button class="btn" id="gAgain">Quay lại</button></div>';
   if($("gEat"))$("gEat").onclick=()=>{
     gdlg.close();sel=todayIso;renderAll();openMeal(gMeal);
     // Bữa đã có món thì thêm món quay được thành 1 dòng mới, không ghi đè món cũ.
