@@ -81,6 +81,13 @@ function doPost(e) {
         return jsonOutput({ ok: false, error: 'chỉ được xoá bữa của hôm nay' });
       }
       mealSheet3.deleteRow(foundRow3 + 1);
+    } else if (data.kind === 'ai-estimate') {
+      return jsonOutput(aiEstimateCalories(data));
+    } else if (data.kind === 'ai-suggest') {
+      return jsonOutput(aiSuggestMeals(data));
+    } else if (data.kind === 'profile') {
+      // Hồ sơ chỉ số cơ thể (1 bản duy nhất) — lưu trong Script Properties cho gọn.
+      PropertiesService.getScriptProperties().setProperty('USER_PROFILE', JSON.stringify(data.profile || null));
     } else {
       return jsonOutput({ ok: false, error: 'unknown kind' });
     }
@@ -204,7 +211,83 @@ function doGet(e) {
     });
     return jsonOutput({ ok: true, triggers: triggers });
   }
-  return jsonOutput({ ok: false, error: 'missing ?kind=gate-log|feedback|meal' });
+  if (kind === 'profile') {
+    var raw = PropertiesService.getScriptProperties().getProperty('USER_PROFILE');
+    return jsonOutput({ ok: true, profile: raw ? JSON.parse(raw) : null });
+  }
+  return jsonOutput({ ok: false, error: 'missing ?kind=gate-log|feedback|meal|profile' });
+}
+
+// ============ AI (Claude) ============
+// Cần Script Property ANTHROPIC_API_KEY. Không có key thì trả về { ok:false, error:'no-key' }
+// và an-uong.html tự dùng bảng calo tích hợp sẵn thay thế.
+function callClaude(content) {
+  var key = PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY');
+  if (!key) return { ok: false, error: 'no-key' };
+  var res = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    headers: {
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'server-side-fallback-2026-07-01',
+    },
+    payload: JSON.stringify({
+      model: 'claude-opus-5-5',
+      max_tokens: 8000,
+      output_config: { effort: 'low' },
+      fallbacks: 'default',
+      messages: [{ role: 'user', content: content }],
+    }),
+  });
+  if (res.getResponseCode() !== 200) {
+    return { ok: false, error: 'http-' + res.getResponseCode(), detail: res.getContentText().slice(0, 300) };
+  }
+  var body = JSON.parse(res.getContentText());
+  if (body.stop_reason === 'refusal') return { ok: false, error: 'refusal' };
+  var text = (body.content || [])
+    .filter(function (b) { return b.type === 'text'; })
+    .map(function (b) { return b.text; })
+    .join('');
+  var match = /\{[\s\S]*\}/.exec(text);
+  if (!match) return { ok: false, error: 'bad-json' };
+  try {
+    return { ok: true, result: JSON.parse(match[0]) };
+  } catch (err) {
+    return { ok: false, error: 'bad-json' };
+  }
+}
+
+function aiEstimateCalories(data) {
+  var meal = String(data.mealName || 'bữa ăn').toLowerCase();
+  var desc = (data.name ? ', người dùng gọi món là: "' + data.name + '"' : '') +
+    (data.note ? '. Ghi chú của người dùng: "' + data.note + '"' : '');
+  var schema = '{"ten_mon":"tên ngắn gọn của bữa","thanh_phan":[{"ten":"...","khau_phan":"...","kcal":0}],' +
+    '"tong_kcal":0,"do_tin_cay":"thấp|trung bình|cao","ghi_chu":"một câu nhận xét dinh dưỡng ngắn"}';
+  var content = [];
+  if (data.image) {
+    content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: data.image } });
+    content.push({ type: 'text', text: 'Bạn là chuyên gia dinh dưỡng Việt Nam. Hãy ước tính lượng calo của ' + meal +
+      ' trong ảnh' + desc + '. Nhận diện từng thành phần, ước lượng khẩu phần theo kích thước chén đĩa thông thường ở Việt Nam, rồi tính kcal. ' +
+      'Trả lời bằng tiếng Việt, CHỈ một đối tượng JSON, không kèm chữ nào khác, theo mẫu: ' + schema });
+  } else {
+    if (!data.name) return { ok: false, error: 'no-input' };
+    content.push({ type: 'text', text: 'Bạn là chuyên gia dinh dưỡng Việt Nam. Hãy ước tính calo cho ' + meal + desc +
+      ', với khẩu phần thông thường ở Việt Nam. Trả lời CHỈ một đối tượng JSON theo mẫu: ' + schema });
+  }
+  return callClaude(content);
+}
+
+function aiSuggestMeals(data) {
+  var prompt = 'Bạn là chuyên gia dinh dưỡng Việt Nam. ' + (data.who || '') +
+    'Mục tiêu của người dùng là ' + data.goal + ' kcal/ngày. Hôm nay họ đã ăn: ' + (data.eaten || 'chưa ăn gì') +
+    '. Tổng sáng + trưa: ' + data.eatenMain + ' kcal. Mức calo đề xuất: bữa chiều khoảng ' + data.chieu +
+    ' kcal, bữa tối khoảng ' + data.toi + ' kcal. Hãy gợi ý 3 món ăn Việt Nam dễ tìm cho mỗi bữa chưa ăn, ' +
+    'mỗi món kèm khẩu phần và kcal ước tính, cân bằng đạm, rau và tinh bột, bù đắp phần còn thiếu của bữa sáng, trưa. ' +
+    'Nếu sáng và trưa ăn quá ít thì nhắc nhẹ nhàng. Trả lời CHỈ JSON: ' +
+    '{"chieu":{"mon":["Tên món – khẩu phần – ~kcal"]},"toi":{"mon":["..."]},"nhan_xet":"1–2 câu nhận xét và lời khuyên"}';
+  return callClaude([{ type: 'text', text: prompt }]);
 }
 
 function getOrCreateSheet(ss, name, headers) {
