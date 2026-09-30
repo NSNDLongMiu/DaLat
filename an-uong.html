@@ -616,13 +616,26 @@ html:has(dialog[open]),html:has(dialog[open]) body{overflow:hidden}
 // ảnh lưu trên Google Drive. Số calo được ghi vào đầu cột Note dạng "[650 kcal] ghi chú" để không phải đổi cấu trúc Sheet.
 const GAS_ENDPOINT="https://script.google.com/macros/s/AKfycbwr-hk9bKwMh0gLs3ZUiu9uNtZNe0pkpRAz3YyRvSa63WpyLcYsSigU5C6ErJ9kKqlk2Q/exec";
 function gasGet(kind){return fetch(GAS_ENDPOINT+"?kind="+kind+"&t="+Date.now()).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
-// Google thỉnh thoảng trả về trang HTML tạm thời thay vì JSON (dù việc ghi có thể đã thành công).
-// Trường hợp đó trả về {bad:true} để nơi gọi tự kiểm tra lại với máy chủ, thay vì báo lỗi SyntaxError khó hiểu.
-function gasPost(payload){
-  return fetch(GAS_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
-    .then(r=>r.text())
-    .then(t=>{try{return JSON.parse(t)}catch(e){console.warn("gasPost: phản hồi không phải JSON:",t.slice(0,200));return {ok:false,error:"bad-response",bad:true}}})
-    .catch(e=>({ok:false,error:String(e)}));
+// Web App của Google thỉnh thoảng trả nhầm: trang HTML lỗi, hoặc câu trả lời của phần đọc ("missing ?kind...")
+// cho một yêu cầu ghi. Các yêu cầu ở đây đều an toàn khi gửi lại (ghi bữa theo mã thời gian sẽ ghi đè, không thêm dòng trùng),
+// nên tự thử lại tối đa 3 lần. Vẫn hỏng thì trả {bad:true} để nơi gọi tự kiểm tra lại trên máy chủ.
+async function gasPost(payload,tries=3){
+  let last={ok:false,error:"bad-response",bad:true};
+  for(let i=0;i<tries;i++){
+    try{
+      const r=await fetch(GAS_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+      const t=await r.text();let j=null;
+      try{j=JSON.parse(t)}catch(e){}
+      const misrouted=j&&j.ok===false&&/^missing \?kind/.test(String(j.error||""));
+      if(j&&!misrouted)return j;
+      console.warn("gasPost: phản hồi sai (lần "+(i+1)+"):",t.slice(0,160));
+      last={ok:false,error:"bad-response",bad:true};
+    }catch(e){
+      last={ok:false,error:String(e)};
+    }
+    if(i<tries-1)await new Promise(res=>setTimeout(res,700*(i+1)));
+  }
+  return last;
 }
 // Tìm 1 bữa trên máy chủ theo mã thời gian, dùng để xác nhận việc lưu/xóa khi phản hồi bị hỏng.
 async function findOnServer(time){
@@ -1265,6 +1278,7 @@ $("fDel").onclick=async()=>{
   $("fDel").disabled=true;busy=true;
   let res=await gasPost({kind:"meal-delete",id:p.time});
   if(res&&res.bad){const c=await findOnServer(p.time);if(c.ok&&!c.found)res={ok:true}}
+  if(res&&res.ok===false&&/không tìm thấy/.test(res.error||""))res={ok:true};   // lần gửi trước đã xóa xong
   $("fDel").disabled=false;busy=false;
   if(!res||res.ok===false){$("fErr").textContent="Không xóa được"+(res&&res.error?" ("+saveErrText(res.error)+")":"")+". Thử lại nhé.";return}
   entries=entries.filter(e=>e.time!==p.time);
