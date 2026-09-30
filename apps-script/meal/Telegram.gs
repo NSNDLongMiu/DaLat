@@ -28,6 +28,10 @@ var FRUIT_DESSERT_POOL_GS = [
   'Bánh flan', 'Sữa chua', 'Rau câu', 'Chè đậu xanh',
 ];
 
+// Tên lưu trong Sheet vẫn là Long/Uyn; tin nhắn Telegram dùng tên gọi thân mật.
+var DISPLAY_GS = { 'Long': 'Anh Long', 'Uyn': 'Bé Uyn' };
+function dispName(p) { return DISPLAY_GS[p] || p; }
+
 function pickRandomGS(pool, count) {
   var copy = pool.slice();
   var out = [];
@@ -62,7 +66,7 @@ function notifyIfMealIsRough(data) {
   if (!isRough) return;
 
   var who = normPerson(data.person);
-  var lines = ['⚠️ <b>' + who + '</b> · <b>' + data.meal + '</b> hôm nay: ' + (data.portion || '') + (data.taste ? ' · ' + data.taste : '')];
+  var lines = ['⚠️ <b>' + dispName(who) + '</b> · <b>' + data.meal + '</b> hôm nay: ' + (data.portion || '') + (data.taste ? ' · ' + data.taste : '')];
   if (data.food) lines.push('Món: ' + data.food);
   lines.push('');
   lines.push('🍪 Gợi ý ăn bù nhẹ: ' + pickRandomGS(SNACK_POOL_GS, 3).join(', '));
@@ -152,13 +156,13 @@ function remindWhoNotLogged(mealName) {
     return !(personDayStatus(p).byMeal[mealName] || []).length;
   });
   if (!who.length) return;
-  sendTelegram('⏰ Chưa thấy <b>' + who.join(' và ') + '</b> cập nhật bữa ' + mealName + ' hôm nay — ăn xong nhớ ghi vào app nhé!');
+  sendTelegram('⏰ Chưa thấy <b>' + who.map(dispName).join(' và ') + '</b> cập nhật bữa ' + mealName + ' hôm nay — ăn xong nhớ ghi vào app nhé!');
 }
 
 // 1. 7h30 — nhắc chuẩn bị bữa sáng, kèm gợi ý random món ăn.
 function remindPrepareBreakfast() {
   var picks = pickRandomGS(MEAL_IDEA_POOL_GS, 3);
-  sendTelegram('🌅 7h30 rồi, chuẩn bị bữa sáng thôi Long, Uyn!\nGợi ý: ' + picks.join(', '));
+  sendTelegram('🌅 7h30 rồi, chuẩn bị bữa sáng thôi Anh Long, Bé Uyn!\nGợi ý: ' + picks.join(', '));
 }
 
 // 2. 8h30 — nhắc ai chưa cập nhật bữa sáng vào app.
@@ -169,7 +173,7 @@ function remindUpdateBreakfast() {
 // 3. 10h30 — nhắc chuẩn bị bữa trưa, kèm gợi ý random món ăn.
 function remindPrepareLunch() {
   var picks = pickRandomGS(MEAL_IDEA_POOL_GS, 3);
-  sendTelegram('☀️ 10h30 rồi, chuẩn bị bữa trưa thôi Long, Uyn!\nGợi ý: ' + picks.join(', '));
+  sendTelegram('☀️ 10h30 rồi, chuẩn bị bữa trưa thôi Anh Long, Bé Uyn!\nGợi ý: ' + picks.join(', '));
 }
 
 // 4. 12h30 — nhắc ai chưa cập nhật bữa trưa vào app.
@@ -198,7 +202,7 @@ function alertAfternoonFoodIfNeeded() {
     if (bad.length) why.push('bữa ' + bad.join(', ') + ' bỏ/ăn ít/không ngon');
     if (thin && !noLog.length) why.push('sáng + trưa mới ~' + eatenMain + '/' + expected + ' kcal');
     var need = Math.max(0, Math.round((st.goal - eatenMain) / 10) * 10);
-    lines.push('• <b>' + person + '</b>: ' + why.join('; ') + ' → cần ăn thêm đồ chiều; còn thiếu ~' + need + ' kcal cho chiều + tối.');
+    lines.push('• <b>' + dispName(person) + '</b>: ' + why.join('; ') + ' → cần ăn thêm đồ chiều; còn thiếu ~' + need + ' kcal cho chiều + tối.');
   });
   if (!lines.length) return;
   sendTelegram('⚠️ <b>Cần đặt thêm đồ ăn chiều nay</b>\n' + lines.join('\n') + '\nĐừng để đói bụng nhé!');
@@ -208,7 +212,7 @@ function alertAfternoonFoodIfNeeded() {
 function remindPrepareDinner() {
   var mains = pickRandomGS(MEAL_IDEA_POOL_GS, 2);
   var desserts = pickRandomGS(FRUIT_DESSERT_POOL_GS, 2);
-  sendTelegram('🌙 17h30 rồi, chuẩn bị bữa tối thôi Long, Uyn!\nMón chính gợi ý: ' + mains.join(', ') + '\nTráng miệng/hoa quả: ' + desserts.join(', '));
+  sendTelegram('🌙 17h30 rồi, chuẩn bị bữa tối thôi Anh Long, Bé Uyn!\nMón chính gợi ý: ' + mains.join(', ') + '\nTráng miệng/hoa quả: ' + desserts.join(', '));
 }
 
 // 7. 20h00 — nhắc ai chưa cập nhật bữa tối vào app.
@@ -225,10 +229,10 @@ function sendDailyReport() {
     var st = personDayStatus(person);
     var pct = Math.round(st.kcal / st.goal * 100);
     lines.push('');
-    lines.push('👤 <b>' + person + '</b> — ' + st.meals.length + ' bữa · ' + st.kcal + '/' + st.goal + ' kcal (' + pct + '%)');
+    lines.push('👤 <b>' + dispName(person) + '</b> — ' + st.meals.length + ' bữa · ' + st.kcal + '/' + st.goal + ' kcal (' + pct + '%)');
     if (!st.meals.length) {
-      notEntered.push(person);
-      needMore.push(person + ' (~' + st.goal + ' kcal)');
+      notEntered.push(dispName(person));
+      needMore.push(dispName(person) + ' (~' + st.goal + ' kcal)');
       lines.push('  ❌ Chưa nhập gì hôm nay.');
       return;
     }
@@ -250,8 +254,8 @@ function sendDailyReport() {
     }
 
     if (pct < 80) {
-      undereat.push(person + ' (' + pct + '%)');
-      needMore.push(person + ' (~' + (st.goal - st.kcal) + ' kcal)');
+      undereat.push(dispName(person) + ' (' + pct + '%)');
+      needMore.push(dispName(person) + ' (~' + (st.goal - st.kcal) + ' kcal)');
       lines.push('  ⚠️ Ăn thiếu ~' + (st.goal - st.kcal) + ' kcal so với mục tiêu.');
     } else if (!st.missing.length && !skipped.length && !rough.length && hasVeggie) {
       lines.push('  ✅ Hôm nay ăn rất ổn.');
