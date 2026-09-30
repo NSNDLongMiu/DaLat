@@ -58,7 +58,7 @@ function todayStrGS() {
 
 // Gọi ngay sau khi ghi 1 bữa — báo lập tức nếu bỏ bữa / ăn ít / không ngon.
 function notifyIfMealIsRough(data) {
-  var isRough = data.portion === 'Bỏ bữa' || data.portion === 'Ăn ít' || data.taste === 'Không ngon';
+  var isRough = data.portion === 'Bỏ bữa' || data.portion === 'Ăn ít' || data.taste === 'Không ngon' || data.taste === 'Tệ';
   if (!isRough) return;
 
   var who = normPerson(data.person);
@@ -87,7 +87,16 @@ function getTodayMeals(person) {
 }
 
 function mealIsBad(m) {
-  return m.portion === 'Bỏ bữa' || m.portion === 'Ăn ít' || m.taste === 'Không ngon';
+  return m.portion === 'Bỏ bữa' || m.portion === 'Ăn ít' || m.taste === 'Không ngon' || m.taste === 'Tệ';
+}
+
+// Đạm / tinh bột / béo / chất xơ ghi ở đầu Note: "[650 kcal P30 C80 F20 S6 AI] ...". Không có thì trả null.
+function macrosOfMeal(m) {
+  var r = /^\[\d+\s*kcal((?:\s+[PCFS]\d+(?:\.\d+)?)*)/i.exec(m.note || '');
+  if (!r || !r[1].trim()) return null;
+  var out = { p: 0, c: 0, f: 0, s: 0 };
+  r[1].trim().split(/\s+/).forEach(function (t) { out[t.charAt(0).toLowerCase()] = Number(t.slice(1)) || 0; });
+  return out;
 }
 
 // Số kcal ghi ở đầu cột Note dạng "[650 kcal] ..." (giống an-uong.html). Không có thì trả null.
@@ -226,10 +235,19 @@ function sendDailyReport() {
     if (st.missing.length) lines.push('  Chưa nhập: ' + st.missing.join(', ') + '.');
     var skipped = st.meals.filter(function (m) { return m.portion === 'Bỏ bữa'; });
     if (skipped.length) lines.push('  Bỏ bữa: ' + skipped.map(function (m) { return m.meal; }).join(', ') + '.');
-    var rough = st.meals.filter(function (m) { return m.portion === 'Ăn ít' || m.taste === 'Không ngon'; });
+    var rough = st.meals.filter(function (m) { return m.portion === 'Ăn ít' || m.taste === 'Không ngon' || m.taste === 'Tệ'; });
     if (rough.length) lines.push('  Ăn ít/không ngon: ' + rough.map(function (m) { return m.meal; }).join(', ') + '.');
     var hasVeggie = st.meals.some(function (m) { return m.veggie === 'Có rau' || m.veggie === 'Nhiều rau'; });
     lines.push(hasVeggie ? '  Có ăn rau. 👍' : '  Chưa ăn rau hôm nay.');
+    // Tổng dinh dưỡng của những bữa đã có số đo (bữa cũ chưa có thì bỏ qua).
+    var macroSum = { p: 0, c: 0, f: 0, s: 0 }, macroMeals = 0;
+    st.meals.forEach(function (m) {
+      var mc = macrosOfMeal(m);
+      if (mc && m.portion !== 'Bỏ bữa') { macroSum.p += mc.p; macroSum.c += mc.c; macroSum.f += mc.f; macroSum.s += mc.s; macroMeals++; }
+    });
+    if (macroMeals) {
+      lines.push('  Đạm ' + Math.round(macroSum.p) + 'g · Tinh bột ' + Math.round(macroSum.c) + 'g · Béo ' + Math.round(macroSum.f) + 'g · Xơ ' + Math.round(macroSum.s) + 'g');
+    }
 
     if (pct < 80) {
       undereat.push(person + ' (' + pct + '%)');

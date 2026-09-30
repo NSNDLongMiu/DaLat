@@ -151,8 +151,10 @@ function aiEstimateCalories(data) {
   var meal = String(data.mealName || 'bữa ăn').toLowerCase();
   var desc = (data.name ? ', người dùng gọi món là: "' + data.name + '"' : '') +
     (data.note ? '. Ghi chú của người dùng: "' + data.note + '"' : '');
-  var schema = '{"ten_mon":"tên ngắn gọn của bữa","thanh_phan":[{"ten":"...","khau_phan":"...","kcal":0}],' +
-    '"tong_kcal":0,"do_tin_cay":"thấp|trung bình|cao","ghi_chu":"một câu nhận xét dinh dưỡng ngắn"}';
+  // dam_g, tinh_bot_g, beo_g, xo_g = gam đạm (protein), tinh bột (carbohydrate), chất béo, chất xơ.
+  var schema = '{"ten_mon":"tên ngắn gọn của bữa","thanh_phan":[{"ten":"...","khau_phan":"...","kcal":0,"dam_g":0,"tinh_bot_g":0,"beo_g":0,"xo_g":0}],' +
+    '"tong_kcal":0,"dam_g":0,"tinh_bot_g":0,"beo_g":0,"xo_g":0,"do_tin_cay":"thấp|trung bình|cao","ghi_chu":"một câu nhận xét dinh dưỡng ngắn"}. ' +
+    'dam_g là gam đạm, tinh_bot_g là gam tinh bột (carbohydrate), beo_g là gam chất béo, xo_g là gam chất xơ; các trường tổng là tổng của các thành phần';
   var content = [];
   if (data.image) {
     content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: data.image } });
