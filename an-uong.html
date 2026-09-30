@@ -513,10 +513,20 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit}
 // ảnh lưu trên Google Drive. Số calo được ghi vào đầu cột Note dạng "[650 kcal] ghi chú" để không phải đổi cấu trúc Sheet.
 const GAS_ENDPOINT="https://script.google.com/macros/s/AKfycbwr-hk9bKwMh0gLs3ZUiu9uNtZNe0pkpRAz3YyRvSa63WpyLcYsSigU5C6ErJ9kKqlk2Q/exec";
 function gasGet(kind){return fetch(GAS_ENDPOINT+"?kind="+kind+"&t="+Date.now()).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
+// Google thỉnh thoảng trả về trang HTML tạm thời thay vì JSON (dù việc ghi có thể đã thành công).
+// Trường hợp đó trả về {bad:true} để nơi gọi tự kiểm tra lại với máy chủ, thay vì báo lỗi SyntaxError khó hiểu.
 function gasPost(payload){
   return fetch(GAS_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
-    .then(r=>r.json()).catch(e=>({ok:false,error:String(e)}));
+    .then(r=>r.text())
+    .then(t=>{try{return JSON.parse(t)}catch(e){console.warn("gasPost: phản hồi không phải JSON:",t.slice(0,200));return {ok:false,error:"bad-response",bad:true}}})
+    .catch(e=>({ok:false,error:String(e)}));
 }
+// Tìm 1 bữa trên máy chủ theo mã thời gian, dùng để xác nhận việc lưu/xóa khi phản hồi bị hỏng.
+async function findOnServer(time){
+  try{const l=await gasGet("meal");if(Array.isArray(l))return {ok:true,found:l.find(e=>e.time===time)||null}}catch(e){}
+  return {ok:false};
+}
+function saveErrText(err){return err==="bad-response"?"máy chủ Google phản hồi lỗi tạm thời":err}
 
 const MEALS=[
   {id:"sang",name:"Bữa sáng",start:6.5,end:9,share:.25},
@@ -845,7 +855,7 @@ function aiErrText(err){
   if(/^http-40[013]/.test(err))return "Khóa AI (API key) trên máy chủ sai, hết hạn hoặc chưa được cấp quyền";
   if(/^http-(429|5\d\d)/.test(err))return "AI đang quá tải";
   if(err==="fetch-failed")return "Apps Script chưa được cấp quyền gọi ra ngoài, cần Deploy lại và bấm Cho phép";
-  if(/SyntaxError|Unexpected token/.test(err))return "Máy chủ Apps Script trả về trang lỗi, kiểm tra lại phần Deploy";
+  if(/SyntaxError|Unexpected token|bad-response/.test(err))return "Máy chủ Apps Script trả về trang lỗi, kiểm tra lại phần Deploy";
   if(/Failed to fetch|NetworkError|Load failed/i.test(err))return "không kết nối được máy chủ";
   return "AI tạm thời không trả lời được"+(err?" ("+err+")":"");
 }
@@ -951,10 +961,13 @@ $("fSave").onclick=async()=>{
   const res=cur.entry
     ?await gasPost({kind:"meal-update",id:cur.entry.time,...entry,...photoPayload})
     :await gasPost({kind:"meal",...entry,...photoPayload});
+  let res2=res;
+  // Phản hồi hỏng nhưng bữa có thể đã được ghi: kiểm tra lại trước khi báo lỗi để khỏi lưu trùng.
+  if(res2&&res2.bad){const c=await findOnServer(entry.time);if(c.ok&&c.found&&c.found.food===entry.food&&c.found.note===entry.note)res2={ok:true,photoId:c.found.photo||""}}
   $("fSave").disabled=false;busy=false;
-  if(!res||res.ok===false){$("fErr").textContent="Không lưu được lên máy chủ"+(res&&res.error?" ("+res.error+")":"")+". Thử lại nhé.";return}
+  if(!res2||res2.ok===false){$("fErr").textContent="Không lưu được lên máy chủ"+(res2&&res2.error?" ("+saveErrText(res2.error)+")":"")+". Thử lại nhé.";return}
   $("fErr").textContent="";
-  entry.photo=res.photoId||"";
+  entry.photo=res2.photoId||"";
   if(cur.entry){const i=entries.findIndex(e=>e.time===cur.entry.time);if(i!==-1)entries[i]=entry;else entries.push(entry)}
   else entries.push(entry);
   lsDel(sugKey(sel));
@@ -966,9 +979,10 @@ $("fDel").onclick=async()=>{
   const p=cur.entry;if(!p)return;
   if(!confirm("Xóa "+(p.food?"\""+p.food+"\"":"bữa này")+"? Không thể hoàn tác."))return;
   $("fDel").disabled=true;busy=true;
-  const res=await gasPost({kind:"meal-delete",id:p.time});
+  let res=await gasPost({kind:"meal-delete",id:p.time});
+  if(res&&res.bad){const c=await findOnServer(p.time);if(c.ok&&!c.found)res={ok:true}}
   $("fDel").disabled=false;busy=false;
-  if(!res||res.ok===false){$("fErr").textContent="Không xóa được"+(res&&res.error?" ("+res.error+")":"")+". Thử lại nhé.";return}
+  if(!res||res.ok===false){$("fErr").textContent="Không xóa được"+(res&&res.error?" ("+saveErrText(res.error)+")":"")+". Thử lại nhé.";return}
   entries=entries.filter(e=>e.time!==p.time);
   lsDel(sugKey(sel));
   buildDays();dlg.close();renderAll();

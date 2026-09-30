@@ -56,12 +56,22 @@ function doPost(e) {
     if (data.kind === 'meal') {
       var mealSheet = getMealSheet(ss);
       photoId = data.photo ? savePhotoToDrive(data.photo) : '';
-      mealSheet.appendRow([
+      var newLine = [
         data.time || '', "'" + (data.date || ''), data.meal || '', data.food || '',
         data.portion || '', data.taste || '', data.veggie || '', data.note || '', photoId,
         normPerson(data.person),
-      ]);
-      notifyIfMealIsRough(data);
+      ];
+      // Cùng mã thời gian đã có (ví dụ app gửi lại vì phản hồi bị hỏng) thì ghi đè, không thêm dòng trùng.
+      var dupRow = -1;
+      if (data.time) {
+        var existingRows = mealSheet.getDataRange().getValues();
+        for (var k = 1; k < existingRows.length; k++) {
+          if (existingRows[k][0] === data.time) { dupRow = k; if (!photoId) newLine[8] = existingRows[k][8]; break; }
+        }
+      }
+      if (dupRow === -1) mealSheet.appendRow(newLine);
+      else mealSheet.getRange(dupRow + 1, 1, 1, newLine.length).setValues([newLine]);
+      if (dupRow === -1) notifyIfMealIsRough(data);
     } else if (data.kind === 'meal-update') {
       // Chỉ cho sửa bữa của đúng ngày hôm nay — chặn sửa bữa của ngày khác kể cả khi
       // ai đó cố gọi thẳng API (phòng trường hợp bỏ qua giới hạn ở giao diện).
