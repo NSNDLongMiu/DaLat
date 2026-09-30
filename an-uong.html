@@ -509,9 +509,9 @@ a.btn{display:inline-flex;align-items:center;text-decoration:none;color:inherit}
 
 <script>
 (function(){
-// Dùng chung Apps Script với trang chính (index.html). Dữ liệu bữa ăn lưu trong tab "Meals" của Google Sheet,
+// Dùng project Apps Script riêng cho nhật ký ăn uống (apps-script/meal/), tách khỏi trang chính. Dữ liệu bữa ăn lưu trong tab "Meals" của Google Sheet,
 // ảnh lưu trên Google Drive. Số calo được ghi vào đầu cột Note dạng "[650 kcal] ghi chú" để không phải đổi cấu trúc Sheet.
-const GAS_ENDPOINT="https://script.google.com/macros/s/AKfycbyM2ODmrwD-mlM4CalUG4pSzGVwsBq9uw2GT6qJBWIDO7EIXPpxyZJNlP22m90m-lXM/exec";
+const GAS_ENDPOINT="https://script.google.com/macros/s/AKfycbwr-hk9bKwMh0gLs3ZUiu9uNtZNe0pkpRAz3YyRvSa63WpyLcYsSigU5C6ErJ9kKqlk2Q/exec";
 function gasGet(kind){return fetch(GAS_ENDPOINT+"?kind="+kind+"&t="+Date.now()).then(r=>{if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
 function gasPost(payload){
   return fetch(GAS_ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)})
