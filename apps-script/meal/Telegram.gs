@@ -10,6 +10,10 @@
 // Nhớ đặt múi giờ project về Asia/Ho_Chi_Minh (Project Settings > General settings) để
 // các mốc giờ nhắc nhở bên dưới chạy đúng giờ Việt Nam.
 
+// Công tắc tổng: false = tạm tắt mọi tin nhắn Telegram (trigger vẫn chạy nhưng không gửi gì).
+// Đổi lại thành true rồi deploy version mới khi cần dùng lại.
+var TELEGRAM_ENABLED = false;
+
 var SNACK_POOL_GS = [
   'Sữa chua + granola', 'Chuối chín', 'Sữa hạt óc chó/hạnh nhân', 'Bánh mì bơ đậu phộng',
   'Súp gà nhẹ', 'Cháo yến mạch', 'Chè đậu xanh ít ngọt', 'Trái cây theo mùa',
@@ -42,6 +46,10 @@ function pickRandomGS(pool, count) {
 }
 
 function sendTelegram(text) {
+  if (!TELEGRAM_ENABLED) {
+    Logger.log('Telegram đang tạm tắt (TELEGRAM_ENABLED = false), bỏ qua tin nhắn.');
+    return;
+  }
   var props = PropertiesService.getScriptProperties();
   var token = props.getProperty('TELEGRAM_BOT_TOKEN');
   var chatId = props.getProperty('TELEGRAM_CHAT_ID');
