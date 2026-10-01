@@ -7,11 +7,13 @@
 //     Không cần tắt Privacy Mode: câu hỏi của bot tự mở khung trả lời cho đúng người được hỏi.
 //   - AI đọc tin nhắn (+ ảnh nếu có) → bản nháp bữa ăn → bot gửi tóm tắt kèm nút.
 //     Trả lời tin tóm tắt để sửa (kcal, bữa, món, thêm ảnh...). Bấm Ngon/Không ngon/Tệ mới ghi vào tab Meals.
-//   - Lần đầu nhắn, bot hỏi bạn là Anh Long hay Bé Uyn và nhớ luôn (Script Property TG_PERSON_<telegram id>).
+//   - Bot tự biết ai đang nhắn theo username Telegram (TG_USERS bên dưới), người khác bị bỏ qua.
 // Cài đặt: xem apps-script/README.md, mục "Chat với bot".
 
 // false = bot không trả lời chat nữa. Độc lập với TELEGRAM_ENABLED (công tắc tin nhắc tự động).
 var TELEGRAM_BOT_ENABLED = true;
+// Username Telegram (chữ thường, không có @) -> tên lưu trong Sheet. Ai đổi username thì sửa ở đây.
+var TG_USERS = { 'llong_llong': 'Long', 'minhuyennn': 'Uyn' };
 var TG_DRAFT_TTL = 6 * 3600;   // bản nháp giữ tối đa 6 giờ (giới hạn của CacheService)
 var TG_MEALS = ['Sáng', 'Trưa', 'Xế', 'Tối'];
 var TG_SHARE = { 'Sáng': 0.25, 'Trưa': 0.35, 'Xế': 0.10, 'Tối': 0.30 };   // giống MEALS trong an-uong.html
@@ -20,7 +22,7 @@ var TG_HELP = '🤖 Mình giúp ghi bữa ăn vào app.\n' +
   '• Trả lời (reply) tin nhắc của bot, nhắc @bot, hoặc gõ /an rồi kể, ví dụ: <i>/an tối nay ăn cơm gà với canh rau ngót</i>\n' +
   '• Gửi kèm ảnh món để ước tính kcal chuẩn hơn và lưu ảnh vào app.\n' +
   '• Mình gửi bản nháp: trả lời bản nháp để sửa, bấm 😋/😕/🤢 để lưu, ❌ để huỷ.\n' +
-  '• /huy: huỷ bản nháp · /doinguoi: đổi bạn là Anh Long hay Bé Uyn.';
+  '• /huy: huỷ bản nháp.';
 
 // ---------- Telegram API ----------
 function tgApi(method, payload) {
@@ -106,24 +108,14 @@ function handleTelegramUpdate(e, upd) {
 function tgGroupId() {
   return String(PropertiesService.getScriptProperties().getProperty('TELEGRAM_CHAT_ID') || '');
 }
-function tgPersonOf(uid) {
-  return PropertiesService.getScriptProperties().getProperty('TG_PERSON_' + uid);
+// Nhận ra người nhắn theo username Telegram (chữ thường, không có @).
+function tgPersonOf(user) {
+  return TG_USERS[String((user && user.username) || '').toLowerCase()] || null;
 }
-// Chỉ phục vụ group đã cấu hình, hoặc nhắn riêng từ người đã đăng ký trong group.
-function tgChatAllowed(chat, uid) {
+// Chỉ phục vụ group đã cấu hình, hoặc nhắn riêng từ Anh Long / Bé Uyn.
+function tgChatAllowed(chat, user) {
   if (String(chat.id) === tgGroupId()) return true;
-  return chat.type === 'private' && !!tgPersonOf(uid);
-}
-
-function tgAskWho(msg) {
-  var uid = String(msg.from.id);
-  tgSend(msg.chat.id, 'Chào ' + tgEsc(msg.from.first_name || 'bạn') + '! Bạn là ai trong app ăn uống?', {
-    reply_to_message_id: msg.message_id,
-    reply_markup: { inline_keyboard: [[
-      { text: 'Anh Long', callback_data: 'who|Long|' + uid },
-      { text: 'Bé Uyn', callback_data: 'who|Uyn|' + uid },
-    ]] },
-  });
+  return chat.type === 'private' && !!tgPersonOf(user);
 }
 
 // ---------- Bản nháp (CacheService, theo telegram id người nhắn) ----------
@@ -151,23 +143,17 @@ function tgOnMessage(msg) {
   if (!msg.from || msg.from.is_bot) return;
   var uid = String(msg.from.id);
   var chat = msg.chat;
-  if (!tgChatAllowed(chat, uid)) {
-    if (chat.type === 'private') tgSend(chat.id, 'Bot này chỉ dùng trong group gia đình. Hãy nhắn bot trong group trước để đăng ký nhé.');
+  var person = tgPersonOf(msg.from);
+  if (!tgChatAllowed(chat, msg.from)) {
+    if (chat.type === 'private') tgSend(chat.id, 'Bot này chỉ dùng cho Anh Long và Bé Uyn thôi nha.');
     return;
   }
+  if (!person) return;   // người lạ trong group: bỏ qua
   var text = String(msg.text || msg.caption || '').replace(/@\w*bot\b/gi, ' ').trim();
   var cmd = (/^\/(\w+)/.exec(text) || [])[1];
   if (cmd) text = text.replace(/^\/\w+/, '').trim();
   cmd = (cmd || '').toLowerCase();
 
-  var person = tgPersonOf(uid);
-  if (!person || cmd === 'doinguoi') {
-    if (String(chat.id) !== tgGroupId()) return;
-    // Giữ lại tin vừa nhắn để xử lý ngay sau khi người dùng chọn tên.
-    if (!person && cmd !== 'doinguoi') CacheService.getScriptCache().put('tgpending_' + uid, JSON.stringify(msg), 3600);
-    tgAskWho(msg);
-    return;
-  }
   if (cmd === 'start' || cmd === 'help') { tgSend(chat.id, TG_HELP); return; }
   if (cmd === 'huy') {
     var old = tgLoadDraft(uid);
@@ -304,32 +290,11 @@ function tgSendSummary(d, replyTo) {
 // ---------- Nút bấm ----------
 function tgOnCallback(cq) {
   var parts = String(cq.data || '').split('|');
-  var uid = String(cq.from.id);
   var msg = cq.message;
   var answer = function (t) { tgApi('answerCallbackQuery', { callback_query_id: cq.id, text: t || '' }); };
-  if (!msg || !tgChatAllowed(msg.chat, uid)) { answer(); return; }
-
-  if (parts[0] === 'who') {
-    if (parts[2] !== uid) { answer('Nút này dành cho người khác.'); return; }
-    var person = parts[1];
-    if (PEOPLE_GS.indexOf(person) === -1) { answer(); return; }
-    PropertiesService.getScriptProperties().setProperty('TG_PERSON_' + uid, person);
-    answer('Đã nhớ!');
-    tgApi('editMessageText', {
-      chat_id: msg.chat.id, message_id: msg.message_id, parse_mode: 'HTML',
-      text: '👋 Đã nhớ: ' + tgEsc(cq.from.first_name || '') + ' là <b>' + dispName(person) + '</b>.\n\n' + TG_HELP,
-    });
-    var cache = CacheService.getScriptCache();
-    var pending = cache.get('tgpending_' + uid);
-    if (pending) {
-      cache.remove('tgpending_' + uid);
-      tgOnMessage(JSON.parse(pending));
-    }
-    return;
-  }
-
+  if (!msg || !tgChatAllowed(msg.chat, cq.from)) { answer(); return; }
   if (parts[0] !== 'sv' && parts[0] !== 'cx') { answer(); return; }
-  if (!tgPersonOf(uid)) { answer('Bạn chưa đăng ký, nhắn bot 1 tin trước nhé.'); return; }
+  if (!tgPersonOf(cq.from)) { answer('Nút này chỉ dành cho Anh Long và Bé Uyn.'); return; }
   var d = tgLoadDraft(parts[1]);
   if (!d || d.id !== parts[2]) {
     answer('Bản nháp này đã hết hạn hoặc đã xử lý.');

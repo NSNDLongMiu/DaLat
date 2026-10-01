@@ -46,14 +46,14 @@ Cài 1 lần:
 2. Deploy version mới (như mục dưới). Lần này Google sẽ hỏi thêm quyền **Cache/Lock**, bấm Cho phép.
 3. Mở `<URL /exec>?kind=set-webhook`, kết quả phải là `"ok":true`. Kiểm tra `"url"` đúng là URL `/exec` đang dùng.
    Nếu sai (ra URL `/dev` hoặc URL khác), thêm Script Property `MEAL_WEBAPP_URL` = URL `/exec` rồi mở lại.
-4. Trong group, mỗi người nhắn `/an` 1 lần rồi bấm chọn mình là Anh Long hay Bé Uyn. Bot nhớ luôn, `/doinguoi` để đổi.
+4. Không cần đăng ký: bot tự nhận ra người nhắn theo username (`@llong_llong` = Anh Long, `@MinhUyennn` = Bé Uyn, sửa ở `TG_USERS` đầu `Bot.gs`).
 
 Cách dùng: trả lời (reply) tin nhắc của bot, nhắc `@tên_bot`, gõ `/an ...` trong group, hoặc nhắn riêng với bot.
 Ví dụ `/an tối nay anh ăn cơm gà với canh rau ngót`. Bot gửi bản nháp có kcal do AI ước tính. Trả lời bản nháp để sửa
 (`650 kcal`, `bữa trưa`, `cả Uyn nữa`, gửi ảnh...). Bấm 😋/😕/🤢 để lưu vào tab Meals, ❌ để huỷ, `/huy` để huỷ bản nháp.
 
 - Không cần tắt Privacy Mode của bot: các câu hỏi của bot tự mở khung trả lời cho đúng người.
-- Bot chỉ phục vụ group có `TELEGRAM_CHAT_ID` và người đã đăng ký trong group đó.
+- Bot chỉ phục vụ group có `TELEGRAM_CHAT_ID`, và chỉ trả lời 2 username trên.
 - `TELEGRAM_BOT_ENABLED` (đầu `Bot.gs`) bật/tắt riêng phần chat. `TELEGRAM_ENABLED` (đầu `Telegram.gs`) bật/tắt tin nhắc tự động.
 - `?kind=webhook-info` xem Telegram có gọi được không (`last_error_message` báo 302 là bình thường với Apps Script, bot vẫn chạy).
 
