@@ -3,7 +3,7 @@
 | Project | Thư mục | Phục vụ | Thay đổi |
 |---|---|---|---|
 | **trip** | `trip/Code.gs` | `index.html`, `viewer.html` (cổng vào `gate-log`, phản hồi `feedback`) | Ổn định, hạn chế sửa |
-| **meal** | `meal/*.gs` (4 file) | `an-uong.html` (bữa ăn, AI, món đã nhập, hồ sơ, Telegram) | Sửa thường xuyên |
+| **meal** | `meal/*.gs` (5 file) | `an-uong.html` (bữa ăn, AI, món đã nhập, hồ sơ, Telegram, chat bot) | Sửa thường xuyên |
 
 Hai project có URL Web App riêng, nên lỗi khi sửa phần ăn uống không thể làm hỏng cổng vào của trang chính.
 Cả hai dùng chung 1 Google Sheet "DaLat Data" (qua Script Property `DATA_SHEET_ID`).
@@ -15,7 +15,7 @@ Nếu muốn dọn code cũ: xoá trigger trước (xem bước 5 bên dưới),
 ## Cài project meal (làm 1 lần)
 1. script.google.com → **New project**, đặt tên `DaLat Meal`.
 2. Tạo đủ 4 file, tên đúng như sau rồi dán nội dung tương ứng:
-   `Code.gs`, `Ai.gs`, `Dishes.gs`, `Telegram.gs` (mọi file `.gs` trong cùng 1 project dùng chung phạm vi hàm).
+   `Code.gs`, `Ai.gs`, `Dishes.gs`, `Telegram.gs`, `Bot.gs` (mọi file `.gs` trong cùng 1 project dùng chung phạm vi hàm).
 3. **Project Settings**:
    - Đặt múi giờ `Asia/Ho_Chi_Minh` (Show "appsscript.json" hoặc mục General settings).
    - Script Properties, **đặt `DATA_SHEET_ID` trước khi chạy lần đầu** (nếu không, project tự tạo Sheet mới trống):
@@ -39,6 +39,23 @@ Nếu muốn dọn code cũ: xoá trigger trước (xem bước 5 bên dưới),
 ## Deploy bản mới mà không đổi URL
 Deploy → **Manage deployments** → biểu tượng bút chì → Version: **New version** → Deploy.
 Bản hỏng thì cũng ở đó chọn lại version trước để rollback, không mất dữ liệu.
+
+## Chat với bot để ghi bữa ăn (Bot.gs)
+Cài 1 lần:
+1. Thêm file `Bot.gs` vào project meal, dán bản mới của `Code.gs`, rồi Save.
+2. Deploy version mới (như mục dưới). Lần này Google sẽ hỏi thêm quyền **Cache/Lock**, bấm Cho phép.
+3. Mở `<URL /exec>?kind=set-webhook`, kết quả phải là `"ok":true`. Kiểm tra `"url"` đúng là URL `/exec` đang dùng.
+   Nếu sai (ra URL `/dev` hoặc URL khác), thêm Script Property `MEAL_WEBAPP_URL` = URL `/exec` rồi mở lại.
+4. Trong group, mỗi người nhắn `/an` 1 lần rồi bấm chọn mình là Anh Long hay Bé Uyn. Bot nhớ luôn, `/doinguoi` để đổi.
+
+Cách dùng: trả lời (reply) tin nhắc của bot, nhắc `@tên_bot`, gõ `/an ...` trong group, hoặc nhắn riêng với bot.
+Ví dụ `/an tối nay anh ăn cơm gà với canh rau ngót`. Bot gửi bản nháp có kcal do AI ước tính. Trả lời bản nháp để sửa
+(`650 kcal`, `bữa trưa`, `cả Uyn nữa`, gửi ảnh...). Bấm 😋/😕/🤢 để lưu vào tab Meals, ❌ để huỷ, `/huy` để huỷ bản nháp.
+
+- Không cần tắt Privacy Mode của bot: các câu hỏi của bot tự mở khung trả lời cho đúng người.
+- Bot chỉ phục vụ group có `TELEGRAM_CHAT_ID` và người đã đăng ký trong group đó.
+- `TELEGRAM_BOT_ENABLED` (đầu `Bot.gs`) bật/tắt riêng phần chat. `TELEGRAM_ENABLED` (đầu `Telegram.gs`) bật/tắt tin nhắc tự động.
+- `?kind=webhook-info` xem Telegram có gọi được không (`last_error_message` báo 302 là bình thường với Apps Script, bot vẫn chạy).
 
 ## Thêm chức năng mới cho meal
 Tạo 1 file `.gs` riêng cho chức năng, rồi thêm 1 nhánh `kind` trong `doPost` (ghi) hoặc `doGet` (đọc) ở `Code.gs`.

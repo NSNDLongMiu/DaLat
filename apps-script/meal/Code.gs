@@ -2,11 +2,12 @@
 // PROJECT "MEAL" — nhật ký ăn uống (an-uong.html)
 // Cách cài: xem apps-script/README.md
 //
-// Project này gồm 4 file, tất cả phải nằm chung 1 project Apps Script:
+// Project này gồm 5 file, tất cả phải nằm chung 1 project Apps Script:
 //   Code.gs      — doPost/doGet (điều phối), Sheet, hồ sơ cơ thể, ảnh Drive   (file này)
 //   Ai.gs        — ước tính kcal + gợi ý món bằng AI (Gemini / Claude)
 //   Dishes.gs    — nạp món người dùng nhập + tự tìm ảnh món/thương hiệu
 //   Telegram.gs  — 8 job nhắc ăn uống và báo cáo qua Telegram
+//   Bot.gs       — chat với bot trong group để ghi bữa ăn hộ (webhook Telegram)
 // Thêm chức năng mới = thêm 1 file .gs riêng + 1 nhánh kind trong doPost/doGet ở file này.
 //
 // Script Properties cần có: DATA_SHEET_ID (trỏ tới Sheet "DaLat Data" đang dùng), PHOTO_FOLDER_ID,
@@ -50,6 +51,11 @@ function getMealSheet(ss) {
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+    // Webhook Telegram (tin nhắn / nút bấm gửi cho bot) — không có trường kind, xem Bot.gs.
+    if (data.update_id !== undefined) {
+      handleTelegramUpdate(e, data);
+      return ContentService.createTextOutput('ok');
+    }
     var ss = getDataSpreadsheet();
     var photoId = '';
 
@@ -215,6 +221,13 @@ function doGet(e) {
     });
     return jsonOutput({ ok: true, triggers: triggers });
   }
+  // Nối bot Telegram với Web App này (chạy lại sau mỗi lần đổi URL deploy) và kiểm tra trạng thái.
+  if (kind === 'set-webhook') {
+    return jsonOutput(setupTelegramWebhook());
+  }
+  if (kind === 'webhook-info') {
+    return jsonOutput(telegramWebhookInfo());
+  }
   // Các món người dùng đã nhập (tab Dishes) — app nạp thêm vào hòm món ăn.
   if (kind === 'dishes') {
     var learned = readSheet(ss, 'Dishes', DISH_KEYS).filter(function (d) { return Number(d.kcal) > 0; });
@@ -233,7 +246,7 @@ function doGet(e) {
   if (kind === 'ai-status') {
     return jsonOutput(aiStatus());
   }
-  return jsonOutput({ ok: false, error: 'missing ?kind=meal|dishes|profile|profiles|ai-status|install-triggers|run-job|list-triggers' });
+  return jsonOutput({ ok: false, error: 'missing ?kind=meal|dishes|profile|profiles|ai-status|install-triggers|run-job|list-triggers|set-webhook|webhook-info' });
 }
 
 // Hồ sơ chỉ số cơ thể: mỗi người 1 bản. Hồ sơ cũ (trước khi có 2 người) thuộc về Long.
