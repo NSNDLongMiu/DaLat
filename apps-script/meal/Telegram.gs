@@ -12,7 +12,7 @@
 
 // Công tắc tổng: false = tạm tắt mọi tin nhắn Telegram (trigger vẫn chạy nhưng không gửi gì).
 // Đổi lại thành true rồi deploy version mới khi cần dùng lại.
-var TELEGRAM_ENABLED = false;
+var TELEGRAM_ENABLED = true;
 
 var SNACK_POOL_GS = [
   'Sữa chua + granola', 'Chuối chín', 'Sữa hạt óc chó/hạnh nhân', 'Bánh mì bơ đậu phộng',

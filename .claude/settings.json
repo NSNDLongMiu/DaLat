@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash",
+      "PowerShell",
+      "Edit",
+      "Read",
+      "Glob",
+      "Grep",
+      "WebSearch",
+      "WebFetch",
+      "NotebookEdit",
+      "Bash(python -c \"import PIL;print\\(PIL.__version__\\)\")",
+      "Bash(python -c \"import requests;print\\('req ok'\\)\")",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(py *)",
+      "PowerShell(python *)",
+      "PowerShell(py *)",
+      "Bash(sed -i 's/^queries={/queries0={/; s/^for k,qs in queries.items/for k,qs in queries.items/' search.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python search.py)"
+    ],
+    "defaultMode": "bypassPermissions"
+  },
+  "skipDangerousModePermissionPrompt": true
+}
