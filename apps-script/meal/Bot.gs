@@ -3,8 +3,10 @@
 // ============================================================
 // Cách hoạt động:
 //   - Telegram gửi tin nhắn dành cho bot tới doPost (webhook) → handleTelegramUpdate().
-//   - Bot nhận tin khi: trả lời (reply) tin của bot, nhắc @tên_bot, gõ /an ..., hoặc nhắn riêng với bot.
-//     Không cần tắt Privacy Mode: câu hỏi của bot tự mở khung trả lời cho đúng người được hỏi.
+//   - Trong group: tin nhắn gửi bot phải @tag tên bot HOẶC trả lời (reply) 1 tin của bot, không thì bỏ qua.
+//     Nhắn riêng với bot thì không cần tag. Tên bot lấy tự động qua getMe (lưu ở Script Property TELEGRAM_BOT_USERNAME).
+//     Ảnh gửi kèm chú thích có @tag bot, hoặc gửi bằng cách reply tin của bot. Không cần tắt Privacy Mode vì
+//     tin có @tag và tin reply bot luôn tới được bot.
 //   - AI đọc tin nhắn (+ ảnh nếu có) → bản nháp bữa ăn → bot gửi tóm tắt kèm nút.
 //     Trả lời tin tóm tắt để sửa (kcal, bữa, món, thêm ảnh...). Bấm Ngon/Không ngon/Tệ mới ghi vào tab Meals.
 //   - Bot tự biết ai đang nhắn theo username Telegram (TG_USERS bên dưới), người khác bị bỏ qua.
@@ -14,15 +16,21 @@
 var TELEGRAM_BOT_ENABLED = true;
 // Username Telegram (chữ thường, không có @) -> tên lưu trong Sheet. Ai đổi username thì sửa ở đây.
 var TG_USERS = { 'llong_llong': 'Long', 'minhuyennn': 'Uyn' };
-var TG_DRAFT_TTL = 6 * 3600;   // bản nháp giữ tối đa 6 giờ (giới hạn của CacheService)
+// TẠM THỜI để chẩn đoán: true = ai trong group cũng dùng được bot, người lạ tính là TG_TEMP_FALLBACK_PERSON.
+// Chạy ổn rồi thì đặt lại false (nếu không, ai trong group cũng ghi được bữa ăn vào Sheet).
+var TG_TEMP_ALLOW_ANYONE = false;
+var TG_TEMP_FALLBACK_PERSON = 'Long';
+// TẠM THỜI: true = bot gửi dòng "🔧 debug" cho mỗi tin nhận được. Chạy ổn rồi thì đặt false.
+var TG_DEBUG = false;
+var TG_DRAFT_TTL =6 * 3600;   // bản nháp giữ tối đa 6 giờ (giới hạn của CacheService)
 var TG_MEALS = ['Sáng', 'Trưa', 'Xế', 'Tối'];
 var TG_SHARE = { 'Sáng': 0.25, 'Trưa': 0.35, 'Xế': 0.10, 'Tối': 0.30 };   // giống MEALS trong an-uong.html
 var TG_TASTES = ['Ngon', 'Không ngon', 'Tệ'];
 var TG_HELP = '🤖 Mình giúp ghi bữa ăn vào app.\n' +
-  '• Trả lời (reply) tin nhắc của bot, nhắc @bot, hoặc gõ /an rồi kể, ví dụ: <i>/an tối nay ăn cơm gà với canh rau ngót</i>\n' +
-  '• Gửi kèm ảnh món để ước tính kcal chuẩn hơn và lưu ảnh vào app.\n' +
-  '• Mình gửi bản nháp: trả lời bản nháp để sửa, bấm 😋/😕/🤢 để lưu, ❌ để huỷ.\n' +
-  '• /huy: huỷ bản nháp.';
+  '• Trong group, mỗi tin gửi bot phải @tag tên bot hoặc trả lời (reply) 1 tin của bot, ví dụ: <i>@tên_bot tối nay ăn cơm gà với canh rau ngót</i> (nhắn riêng thì không cần).\n' +
+  '• Gửi kèm ảnh món (chú thích có @tag bot, hoặc reply tin của bot) để ước tính kcal chuẩn hơn và lưu ảnh vào app.\n' +
+  '• Mình gửi bản nháp: trả lời (reply) bản nháp để sửa, bấm 😋/😕/🤢 để lưu, ❌ để huỷ.\n' +
+  '• @tên_bot /huy: huỷ bản nháp.';
 
 // ---------- Telegram API ----------
 function tgApi(method, payload) {
@@ -41,6 +49,7 @@ function tgSend(chatId, text, extra) {
   var p = { chat_id: chatId, text: text, parse_mode: 'HTML', allow_sending_without_reply: true };
   for (var k in (extra || {})) p[k] = extra[k];
   var r = tgApi('sendMessage', p);
+  if (!r || !r.ok) Logger.log('sendMessage lỗi: ' + (r ? r.description : 'không gọi được Telegram (thiếu TELEGRAM_BOT_TOKEN?)'));
   return r && r.ok ? r.result : null;
 }
 
@@ -57,6 +66,35 @@ function tgDownload(fileId) {
   return res.getResponseCode() === 200 ? res.getBlob().setContentType('image/jpeg') : null;
 }
 
+// Username của bot (chữ thường, không có @), lấy 1 lần qua getMe rồi lưu lại.
+function tgBotUsername() {
+  var props = PropertiesService.getScriptProperties();
+  var name = props.getProperty('TELEGRAM_BOT_USERNAME');
+  if (!name) {
+    var r = tgApi('getMe', {});
+    name = r && r.ok && r.result && r.result.username ? String(r.result.username).toLowerCase() : '';
+    if (name) props.setProperty('TELEGRAM_BOT_USERNAME', name);
+  }
+  return name || '';
+}
+
+// Tách @tag bot khỏi tin nhắn. Trả về { tagged: có tag hay không, text: nội dung đã bỏ tag }.
+function tgStripBotTag(raw) {
+  var name = tgBotUsername();
+  var re = name ? new RegExp('@' + name + '(?![A-Za-z0-9_])', 'gi') : /@\w*bot\b/gi;
+  var tagged = re.test(raw);
+  re.lastIndex = 0;
+  return { tagged: tagged, text: String(raw).replace(re, ' ').replace(/\s+/g, ' ').trim() };
+}
+
+// Tin này có phải đang trả lời (reply) 1 tin do chính bot này gửi không.
+function tgRepliesToBot(msg) {
+  var from = msg.reply_to_message && msg.reply_to_message.from;
+  if (!from || !from.is_bot) return false;
+  var name = tgBotUsername();
+  return !name || String(from.username || '').toLowerCase() === name;
+}
+
 // ---------- Webhook ----------
 // Gọi qua <URL /exec>?kind=set-webhook sau mỗi lần đổi URL deploy. Tự tạo mã bí mật để chỉ Telegram gọi được.
 function setupTelegramWebhook() {
@@ -69,12 +107,13 @@ function setupTelegramWebhook() {
   // getUrl() đôi khi trả URL /dev; đặt Script Property MEAL_WEBAPP_URL (URL /exec) để chắc chắn.
   var url = props.getProperty('MEAL_WEBAPP_URL') || String(ScriptApp.getService().getUrl() || '').replace(/\/dev$/, '/exec');
   if (!url) return { ok: false, error: 'chưa deploy Web app' };
-  var r = tgApi('setWebhook', {
-    url: url + '?tg=' + secret,
-    allowed_updates: ['message', 'callback_query'],
-    drop_pending_updates: true,
-  });
-  return { ok: !!(r && r.ok), telegram: r ? r.description : 'không gọi được Telegram (thiếu TELEGRAM_BOT_TOKEN?)', url: url };
+  // Có TELEGRAM_PROXY_URL (Cloudflare Worker, xem apps-script/telegram-proxy) thì Telegram gọi Worker để tránh lỗi 302
+  // của Apps Script; Worker kiểm tra secret_token rồi chuyển tin sang url?tg=secret. Không có thì gọi thẳng Apps Script.
+  var proxy = props.getProperty('TELEGRAM_PROXY_URL');
+  var hook = { allowed_updates: ['message', 'callback_query'], drop_pending_updates: true };
+  if (proxy) { hook.url = proxy; hook.secret_token = secret; } else { hook.url = url + '?tg=' + secret; }
+  var r = tgApi('setWebhook', hook);
+  return { ok: !!(r && r.ok), telegram: r ? r.description : 'không gọi được Telegram (thiếu TELEGRAM_BOT_TOKEN?)', mode: proxy ? 'proxy' : 'direct', url: proxy || url };
 }
 
 function telegramWebhookInfo() {
@@ -83,22 +122,48 @@ function telegramWebhookInfo() {
   return r;
 }
 
+// TẠM THỜI: bot gửi lại 1 dòng "🔧 debug" cho mỗi tin nhận được (kể cả tin bị bỏ qua), để thấy tin có tới script không.
+function tgDebugEcho(e, upd, secret) {
+  var m = upd.message;
+  if (!m || !m.chat) return;
+  var cache = CacheService.getScriptCache();
+  if (cache.get('tgdbg_' + upd.update_id)) return;
+  cache.put('tgdbg_' + upd.update_id, '1', 3600);
+  var f = m.from || {};
+  tgSend(m.chat.id, '🔧 <b>debug</b> update ' + upd.update_id + '\n' +
+    'chat: <code>' + m.chat.id + '</code> (' + m.chat.type + ')\n' +
+    'từ: @' + tgEsc(f.username || '(không username)') + ' · id ' + f.id + ' · is_bot=' + !!f.is_bot + (m.sender_chat ? ' · sender_chat=' + m.sender_chat.id : '') + '\n' +
+    'mã bí mật: ' + (secret && (e.parameter || {}).tg === secret ? 'đúng' : 'SAI/thiếu') + '\n' +
+    'group đã cấu hình: ' + (String(m.chat.id) === tgGroupId() ? 'khớp' : 'KHÔNG khớp (' + tgGroupId() + ')') + '\n' +
+    'tag bot: ' + (tgStripBotTag(m.text || m.caption || '').tagged ? 'có' : 'không') + ' · reply bot: ' + (tgRepliesToBot(m) ? 'có' : 'không') + '\n' +
+    'text: ' + tgEsc(String(m.text || m.caption || '').slice(0, 80)));
+}
+
 function handleTelegramUpdate(e, upd) {
   var secret = PropertiesService.getScriptProperties().getProperty('TELEGRAM_WEBHOOK_SECRET');
-  if (!secret || (e.parameter || {}).tg !== secret) return;
-  if (!TELEGRAM_BOT_ENABLED) return;
+  if (TG_DEBUG) { try { tgDebugEcho(e, upd, secret); } catch (err) { Logger.log('debug lỗi: ' + err); } }
+  if (!secret || (e.parameter || {}).tg !== secret) { Logger.log('Bot bỏ qua: sai/thiếu mã bí mật ?tg= (update ' + upd.update_id + ')'); return; }
+  if (!TELEGRAM_BOT_ENABLED) { Logger.log('Bot bỏ qua: TELEGRAM_BOT_ENABLED = false'); return; }
   var lock = LockService.getScriptLock();
-  if (!lock.tryLock(25000)) return;
+  if (!lock.tryLock(25000)) { Logger.log('Bot bỏ qua: không lấy được khoá (update ' + upd.update_id + ')'); return; }
   try {
     // Web App trả 302 nên Telegram có thể gửi lại cùng 1 update — đã xử lý thì bỏ qua.
     var cache = CacheService.getScriptCache();
     var seenKey = 'tgupd_' + upd.update_id;
-    if (cache.get(seenKey)) return;
+    if (cache.get(seenKey)) { Logger.log('Bot bỏ qua: update ' + upd.update_id + ' đã xử lý rồi'); return; }
+    var m = upd.message || {};
+    Logger.log('Bot nhận update ' + upd.update_id + ': chat=' + (m.chat && m.chat.id) + ' (' + (m.chat && m.chat.type) + ') từ @' +
+      ((m.from && m.from.username) || '?') + ' text="' + String(m.text || m.caption || '').slice(0, 60) + '"');
     cache.put(seenKey, '1', 21600);
     if (upd.callback_query) tgOnCallback(upd.callback_query);
     else if (upd.message) tgOnMessage(upd.message);
   } catch (err) {
     Logger.log('Bot lỗi: ' + err);
+    // Báo lỗi ra chat (chỉ group đã cấu hình hoặc chat riêng) để khỏi phải mở log mới biết bot hỏng chỗ nào.
+    var em = upd.message;
+    if (em && em.chat && (String(em.chat.id) === tgGroupId() || em.chat.type === 'private')) {
+      tgSend(em.chat.id, '😵 Lỗi nội bộ: <code>' + tgEsc(String(err && err.stack || err).slice(0, 300)) + '</code>', { reply_to_message_id: em.message_id });
+    }
   } finally {
     lock.releaseLock();
   }
@@ -110,7 +175,9 @@ function tgGroupId() {
 }
 // Nhận ra người nhắn theo username Telegram (chữ thường, không có @).
 function tgPersonOf(user) {
-  return TG_USERS[String((user && user.username) || '').toLowerCase()] || null;
+  var known = TG_USERS[String((user && user.username) || '').toLowerCase()];
+  if (known) return known;
+  return TG_TEMP_ALLOW_ANYONE ? TG_TEMP_FALLBACK_PERSON : null;
 }
 // Chỉ phục vụ group đã cấu hình, hoặc nhắn riêng từ Anh Long / Bé Uyn.
 function tgChatAllowed(chat, user) {
@@ -145,11 +212,32 @@ function tgOnMessage(msg) {
   var chat = msg.chat;
   var person = tgPersonOf(msg.from);
   if (!tgChatAllowed(chat, msg.from)) {
+    Logger.log('Bot bỏ qua: chat ' + chat.id + ' không được phép (TELEGRAM_CHAT_ID=' + tgGroupId() + ', người nhắn @' + (msg.from.username || '?') + ')');
     if (chat.type === 'private') tgSend(chat.id, 'Bot này chỉ dùng cho Anh Long và Bé Uyn thôi nha.');
+    else if (tgStripBotTag(msg.text || msg.caption || '').tagged) {
+      // Group lạ (hoặc id group trong TELEGRAM_CHAT_ID bị sai/đổi) mà có tag bot: báo id thật để sửa Script Property.
+      tgSend(chat.id, 'Group này (id <code>' + chat.id + '</code>) chưa được cấu hình. Nếu đúng group của mình, hãy đặt Script Property <b>TELEGRAM_CHAT_ID</b> = <code>' + chat.id + '</code>.',
+        { reply_to_message_id: msg.message_id });
+    }
     return;
   }
-  if (!person) return;   // người lạ trong group: bỏ qua
-  var text = String(msg.text || msg.caption || '').replace(/@\w*bot\b/gi, ' ').trim();
+  if (!person) {   // người lạ trong group
+    Logger.log('Bot bỏ qua: username @' + (msg.from.username || '(không có)') + ' không có trong TG_USERS');
+    if (tgStripBotTag(msg.text || msg.caption || '').tagged || tgRepliesToBot(msg)) {
+      tgSend(chat.id, msg.from.username
+        ? 'Mình chưa nhận ra username <code>@' + tgEsc(msg.from.username) + '</code>. Nếu đây là bạn, hãy thêm username này vào <b>TG_USERS</b> ở đầu Bot.gs.'
+        : 'Tài khoản của bạn chưa đặt username Telegram nên mình không nhận ra. Hãy đặt username trong Cài đặt Telegram rồi thêm vào <b>TG_USERS</b> ở Bot.gs.',
+        { reply_to_message_id: msg.message_id });
+    }
+    return;
+  }
+  var stripped = tgStripBotTag(msg.text || msg.caption || '');
+  // Trong group: phải @tag bot hoặc trả lời (reply) 1 tin của bot thì bot mới nhận.
+  if (chat.type !== 'private' && !stripped.tagged && !tgRepliesToBot(msg)) {
+    Logger.log('Bot bỏ qua: tin trong group không @' + tgBotUsername() + ' và không reply tin của bot');
+    return;
+  }
+  var text = stripped.text;
   var cmd = (/^\/(\w+)/.exec(text) || [])[1];
   if (cmd) text = text.replace(/^\/\w+/, '').trim();
   cmd = (cmd || '').toLowerCase();
@@ -166,7 +254,16 @@ function tgOnMessage(msg) {
     if (cmd === 'an') tgSend(chat.id, TG_HELP);
     return;
   }
-  tgHandleMeal(msg, person, text, photo, cmd === 'an');
+  // Báo ngay là đang xử lý (AI mất vài giây), xong thì xoá tin này đi cho đỡ rối.
+  var ack = tgSend(chat.id, '⏳ Em đang xử lý cho <b>' + tgEsc(dispName(person)) + '</b>, đợi em xíu nhé...', { reply_to_message_id: msg.message_id });
+  try {
+    tgHandleMeal(msg, person, text, photo, cmd === 'an');
+  } catch (err) {
+    Logger.log('Bot lỗi: ' + err);
+    tgSend(chat.id, '😵 Em bị lỗi khi xử lý (' + tgEsc(String(err).slice(0, 150)) + '). Thử lại giúp em nhé.', { reply_to_message_id: msg.message_id });
+  } finally {
+    if (ack) tgApi('deleteMessage', { chat_id: chat.id, message_id: ack.message_id });
+  }
 }
 
 function tgHandleMeal(msg, person, text, photo, forceNew) {
@@ -217,9 +314,15 @@ function tgHandleMeal(msg, person, text, photo, forceNew) {
   tgSendSummary(d, msg.message_id);
 }
 
+// Nhắc người dùng @tag bot khi trả lời trong group (chat riêng không cần).
+function tgTagHint(chat) {
+  var name = tgBotUsername();
+  return chat && chat.type !== 'private' && name ? '\n<i>(reply tin này hoặc @tag @' + name + ' khi trả lời nhé)</i>' : '';
+}
+
 // Hỏi thêm: bật khung trả lời cho đúng người được hỏi (force_reply + selective), để tin trả lời tới được bot.
 function tgAskInDraft(d, msg, question) {
-  var sent = tgSend(d.chatId, question, {
+  var sent = tgSend(d.chatId, question + tgTagHint(msg.chat), {
     reply_to_message_id: msg.message_id,
     reply_markup: { force_reply: true, selective: true },
   });
@@ -266,8 +369,8 @@ function tgSendSummary(d, replyTo) {
   tgClearButtons(d);
   var text = '🍽 <b>Bản nháp</b>\n' + tgDraftText(d);
   if (d.comment && !d.skip) text += '\n<i>' + tgEsc(d.comment) + '</i>';
-  text += '\n\nTrả lời tin này để sửa hoặc bổ sung (vd: "650 kcal", "bữa trưa", "cả Uyn nữa")' +
-    (d.photo || d.skip ? '' : ', hoặc gửi ảnh món để lưu kèm và ước tính chuẩn hơn') + '.\n' +
+  text += '\n\nTrả lời (reply) tin này để sửa hoặc bổ sung (vd: "650 kcal", "bữa trưa", "cả Uyn nữa")' +
+    (d.photo || d.skip ? '' : ', hoặc reply bằng ảnh món để lưu kèm và ước tính chuẩn hơn') + '.\n' +
     (d.skip ? 'Bấm để lưu:' : 'Món có ngon không? Bấm để lưu:');
   var base = '|' + d.owner + '|' + d.id + '|';
   var mark = function (t, label) { return (d.taste === t ? '✅ ' : '') + label; };

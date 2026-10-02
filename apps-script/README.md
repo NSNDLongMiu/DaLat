@@ -48,14 +48,28 @@ Cài 1 lần:
    Nếu sai (ra URL `/dev` hoặc URL khác), thêm Script Property `MEAL_WEBAPP_URL` = URL `/exec` rồi mở lại.
 4. Không cần đăng ký: bot tự nhận ra người nhắn theo username (`@llong_llong` = Anh Long, `@MinhUyennn` = Bé Uyn, sửa ở `TG_USERS` đầu `Bot.gs`).
 
-Cách dùng: trả lời (reply) tin nhắc của bot, nhắc `@tên_bot`, gõ `/an ...` trong group, hoặc nhắn riêng với bot.
-Ví dụ `/an tối nay anh ăn cơm gà với canh rau ngót`. Bot gửi bản nháp có kcal do AI ước tính. Trả lời bản nháp để sửa
-(`650 kcal`, `bữa trưa`, `cả Uyn nữa`, gửi ảnh...). Bấm 😋/😕/🤢 để lưu vào tab Meals, ❌ để huỷ, `/huy` để huỷ bản nháp.
+Cách dùng: **trong group, mỗi tin gửi bot phải @tag tên bot hoặc trả lời (reply) 1 tin của bot** (kể cả `/an`, ảnh kèm chú thích); không thì bot bỏ qua.
+Nhắn riêng với bot thì không cần.
+Ví dụ `@tên_bot tối nay anh ăn cơm gà với canh rau ngót`. Bot gửi bản nháp có kcal do AI ước tính. Reply bản nháp để sửa
+(`650 kcal`, `bữa trưa`, `cả Uyn nữa`, gửi ảnh...). Bấm 😋/😕/🤢 để lưu vào tab Meals, ❌ để huỷ, `@tên_bot /huy` để huỷ bản nháp.
 
-- Không cần tắt Privacy Mode của bot: các câu hỏi của bot tự mở khung trả lời cho đúng người.
+- Tên bot tự lấy qua `getMe` và lưu ở Script Property `TELEGRAM_BOT_USERNAME` (đổi bot khác thì xoá property này đi).
+- Không cần tắt Privacy Mode của bot: tin có @tag và tin reply bot luôn tới được bot.
 - Bot chỉ phục vụ group có `TELEGRAM_CHAT_ID`, và chỉ trả lời 2 username trên.
 - `TELEGRAM_BOT_ENABLED` (đầu `Bot.gs`) bật/tắt riêng phần chat. `TELEGRAM_ENABLED` (đầu `Telegram.gs`) bật/tắt tin nhắc tự động.
 - `?kind=webhook-info` xem Telegram có gọi được không (`last_error_message` báo 302 là bình thường với Apps Script, bot vẫn chạy).
+
+### Proxy Cloudflare (nên dùng nếu bot lúc trả lời lúc im)
+Apps Script luôn trả `302` cho webhook nên Telegram coi là lỗi, giữ tin lại và gửi lại nhiều lần. Worker miễn phí của Cloudflare
+đứng giữa: trả `200` cho Telegram ngay rồi chuyển tin sang Apps Script ở phía sau.
+1. Đăng ký `dash.cloudflare.com/sign-up` (chỉ cần email, không cần thẻ), vào **Workers & Pages** > **Create** > **Create Worker**, đặt tên
+   (vd `meal-bot-proxy`), Deploy, rồi **Edit code** và dán toàn bộ `apps-script/telegram-proxy/worker.js`, Deploy.
+2. Worker > **Settings** > **Variables and Secrets**, thêm 2 Secret (giá trị `TELEGRAM_WEBHOOK_SECRET` xem ở Apps Script > Project Settings > Script Properties):
+   - `TG_SECRET` = giá trị `TELEGRAM_WEBHOOK_SECRET`
+   - `GAS_URL` = `<URL /exec của Web App meal>?tg=<giá trị TELEGRAM_WEBHOOK_SECRET>`
+3. Apps Script > Script Properties, thêm `TELEGRAM_PROXY_URL` = địa chỉ Worker (dạng `https://meal-bot-proxy.<tên>.workers.dev`).
+4. Dán bản mới của `Bot.gs`, deploy New version, rồi mở `<URL /exec>?kind=set-webhook` (kết quả có `"mode":"proxy"`).
+   Muốn quay lại gọi thẳng Apps Script thì xoá Script Property `TELEGRAM_PROXY_URL` và mở lại `set-webhook`.
 
 ## Thêm chức năng mới cho meal
 Tạo 1 file `.gs` riêng cho chức năng, rồi thêm 1 nhánh `kind` trong `doPost` (ghi) hoặc `doGet` (đọc) ở `Code.gs`.
